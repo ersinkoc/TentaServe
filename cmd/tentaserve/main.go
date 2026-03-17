@@ -13,8 +13,11 @@ import (
 
 	"github.com/ersinkoc/tentaserve/internal/config"
 	"github.com/ersinkoc/tentaserve/internal/gateway/auth"
+	"github.com/ersinkoc/tentaserve/internal/gateway/breaker"
+	"github.com/ersinkoc/tentaserve/internal/gateway/cache"
 	"github.com/ersinkoc/tentaserve/internal/gateway/metrics"
 	"github.com/ersinkoc/tentaserve/internal/gateway/middleware"
+	"github.com/ersinkoc/tentaserve/internal/gateway/ratelimit"
 	"github.com/ersinkoc/tentaserve/internal/observability"
 	"github.com/ersinkoc/tentaserve/internal/server"
 )
@@ -186,6 +189,10 @@ func createHandler(cfg *config.Config, logger *observability.Logger, mcpServer *
 	// Create a basic handler
 	mux := http.NewServeMux()
 
+	// Create OpenAPI manager and register upstreams
+	openAPIManager := NewOpenAPIManager(logger.Logger)
+	openAPIManager.RegisterUpstreams(cfg)
+
 	// Health endpoint
 	mux.HandleFunc("GET /-/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -205,7 +212,7 @@ func createHandler(cfg *config.Config, logger *observability.Logger, mcpServer *
 	}
 
 	// GraphQL endpoint - create real handler with resolvers
-	graphqlHandler := createGraphQLHandler(cfg, logger.Logger)
+	graphqlHandler := createGraphQLHandler(cfg, logger.Logger, openAPIManager)
 	mux.Handle("POST "+cfg.Gateway.GraphQLPath, graphqlHandler)
 
 	// MCP endpoint - integrate with MCP server if enabled
@@ -224,24 +231,72 @@ func createHandler(cfg *config.Config, logger *observability.Logger, mcpServer *
 	restHandler := NewRESTHandler(cfg, logger.Logger)
 	mux.Handle(cfg.Gateway.RESTPrefix+"/", restHandler)
 
-	// Apply middleware chain
-	requestID := middleware.NewRequestID(cfg.Observability.RequestID.Header)
-	chain := middleware.NewChain(
-		requestID.Wrap,
-		loggingMiddleware(logger),
-	)
+	// Build middleware chain
+	var handler http.Handler = mux
+
+	// Add rate limiting if enabled
+	if cfg.Gateway.RateLimit.Enabled {
+		rlConfig := &ratelimit.Config{
+			Enabled: true,
+			Rate:    float64(cfg.Gateway.RateLimit.RequestsPerSecond),
+			Burst:   cfg.Gateway.RateLimit.BurstSize,
+			Scope:   ratelimit.ScopeIP,
+		}
+		rlStore := ratelimit.NewStore(rlConfig)
+		rlMiddleware := ratelimit.NewMiddleware(rlStore, logger.Logger)
+		handler = rlMiddleware.Wrap(handler)
+		logger.Info("Rate limiting enabled",
+			slog.Int("rps", cfg.Gateway.RateLimit.RequestsPerSecond),
+			slog.Int("burst", cfg.Gateway.RateLimit.BurstSize),
+		)
+	}
+
+	// Add circuit breaker if enabled
+	if cfg.Gateway.CircuitBreaker.Enabled {
+		cbConfig := &breaker.Config{
+			Enabled:             true,
+			FailureThreshold:    uint32(cfg.Gateway.CircuitBreaker.FailureThreshold),
+			Timeout:             cfg.Gateway.CircuitBreaker.ResetTimeout,
+			HalfOpenMaxRequests: uint32(cfg.Gateway.CircuitBreaker.HalfOpenRequests),
+		}
+		cbStore := breaker.NewStore(cbConfig)
+		cbMiddleware := breaker.NewMiddleware(cbStore, logger.Logger)
+		handler = cbMiddleware.Wrap(handler)
+		logger.Info("Circuit breaker enabled",
+			slog.Int("threshold", cfg.Gateway.CircuitBreaker.FailureThreshold),
+			slog.Duration("reset_timeout", cfg.Gateway.CircuitBreaker.ResetTimeout),
+		)
+	}
+
+	// Add caching if enabled
+	if cfg.Gateway.Cache.Enabled {
+		cacheConfig := &cache.Config{
+			Enabled:    true,
+			MaxSize:    int(cfg.Gateway.Cache.MaxSize),
+			MaxEntries: 10000,
+			TTL:        cfg.Gateway.Cache.TTL,
+		}
+		cacheInstance := cache.New(cacheConfig)
+		cacheMiddleware := cache.NewMiddleware(cacheInstance, logger.Logger)
+		handler = cacheMiddleware.Wrap(handler)
+		logger.Info("Cache enabled",
+			slog.Int64("max_size", cfg.Gateway.Cache.MaxSize),
+			slog.Duration("ttl", cfg.Gateway.Cache.TTL),
+		)
+	}
 
 	// Add auth middleware if configured
 	authMiddleware := createAuthMiddleware(cfg, logger)
 	if authMiddleware != nil {
-		chain = middleware.NewChain(
-			requestID.Wrap,
-			authMiddleware.Wrap,
-			loggingMiddleware(logger),
-		)
+		handler = authMiddleware.Wrap(handler)
 	}
 
-	handler := chain.Then(mux)
+	// Add request ID middleware
+	requestID := middleware.NewRequestID(cfg.Observability.RequestID.Header)
+	handler = requestID.Wrap(handler)
+
+	// Add logging middleware last
+	handler = loggingMiddleware(logger)(handler)
 
 	return handler
 }

@@ -25,6 +25,7 @@ type ExecutionContext struct {
 	Context    context.Context
 	Variables  map[string]interface{}
 	Errors     []ExecutionError
+	Document   *Document // Reference to the parsed document for fragment resolution
 	mu         sync.Mutex
 }
 
@@ -71,6 +72,7 @@ func (e *Executor) Execute(ctx context.Context, doc *Document, variables map[str
 		Context:   ctx,
 		Variables: variables,
 		Errors:    make([]ExecutionError, 0),
+		Document:  doc, // Store document for fragment resolution
 	}
 
 	// Find the operation (query, mutation, subscription)
@@ -135,9 +137,19 @@ func (e *Executor) executeSelectionSet(execCtx *ExecutionContext, selectionSet *
 			key := e.getFieldKey(sel)
 			result[key] = fieldResult
 		case *FragmentSpread:
-			// TODO: Implement fragment spread resolution
+			// Resolve fragment spread by looking up the fragment definition
+			fragmentResult := e.executeFragmentSpread(execCtx, sel, parent, parentType)
+			// Merge fragment results into current result
+			for k, v := range fragmentResult {
+				result[k] = v
+			}
 		case *InlineFragment:
-			// TODO: Implement inline fragment resolution
+			// Resolve inline fragment if type condition matches
+			fragmentResult := e.executeInlineFragment(execCtx, sel, parent, parentType)
+			// Merge fragment results into current result
+			for k, v := range fragmentResult {
+				result[k] = v
+			}
 		}
 	}
 
@@ -176,6 +188,86 @@ func (e *Executor) executeField(execCtx *ExecutionContext, field *Field, parent 
 	return value
 }
 
+// executeFragmentSpread resolves a fragment spread (...FragmentName).
+func (e *Executor) executeFragmentSpread(execCtx *ExecutionContext, spread *FragmentSpread, parent interface{}, parentType string) map[string]interface{} {
+	// Find the fragment definition in the document
+	fragmentName := spread.Name.Value
+	fragment := e.findFragmentDefinition(execCtx.Document, fragmentName)
+
+	if fragment == nil {
+		execCtx.addError(ExecutionError{
+			Message: fmt.Sprintf("Fragment '%s' is not defined", fragmentName),
+			Path:    []string{fragmentName},
+		})
+		return nil
+	}
+
+	// Determine the actual type from the parent object
+	actualType := parentType
+	if m, ok := parent.(map[string]interface{}); ok {
+		if tn, ok := m["__typename"].(string); ok {
+			actualType = tn
+		}
+	}
+
+	// Check type condition if present
+	if fragment.TypeCondition != nil && fragment.TypeCondition.Name != nil {
+		if fragment.TypeCondition.Name.Value != actualType {
+			// Type doesn't match - return empty result
+			return nil
+		}
+	}
+
+	// Execute the fragment's selection set with the fragment's type
+	fragmentType := actualType
+	if fragment.TypeCondition != nil && fragment.TypeCondition.Name != nil {
+		fragmentType = fragment.TypeCondition.Name.Value
+	}
+	return e.executeSelectionSet(execCtx, fragment.SelectionSet, parent, fragmentType)
+}
+
+// executeInlineFragment resolves an inline fragment (... on Type { ... }).
+func (e *Executor) executeInlineFragment(execCtx *ExecutionContext, fragment *InlineFragment, parent interface{}, parentType string) map[string]interface{} {
+	// Determine the actual type from the parent object
+	actualType := parentType
+	if m, ok := parent.(map[string]interface{}); ok {
+		if tn, ok := m["__typename"].(string); ok {
+			actualType = tn
+		}
+	}
+
+	// Check type condition
+	if fragment.TypeCondition != nil && fragment.TypeCondition.Name != nil {
+		if fragment.TypeCondition.Name.Value != actualType {
+			// Type doesn't match - return empty result
+			return nil
+		}
+	}
+
+	// Execute the inline fragment's selection set with the fragment's type
+	fragmentType := actualType
+	if fragment.TypeCondition != nil && fragment.TypeCondition.Name != nil {
+		fragmentType = fragment.TypeCondition.Name.Value
+	}
+	return e.executeSelectionSet(execCtx, fragment.SelectionSet, parent, fragmentType)
+}
+
+// findFragmentDefinition finds a fragment definition by name in the document.
+func (e *Executor) findFragmentDefinition(doc *Document, name string) *FragmentDefinition {
+	if doc == nil {
+		return nil
+	}
+
+	for _, def := range doc.Definitions {
+		if fragment, ok := def.(*FragmentDefinition); ok {
+			if fragment.Name != nil && fragment.Name.Value == name {
+				return fragment
+			}
+		}
+	}
+	return nil
+}
+
 // resolveNested resolves nested fields for object or list values.
 func (e *Executor) resolveNested(execCtx *ExecutionContext, selectionSet *SelectionSet, value interface{}) interface{} {
 	if value == nil {
@@ -195,16 +287,29 @@ func (e *Executor) resolveNested(execCtx *ExecutionContext, selectionSet *Select
 	if m, ok := value.(map[string]interface{}); ok {
 		result := make(map[string]interface{})
 		for _, selection := range selectionSet.Selections {
-			if field, ok := selection.(*Field); ok {
-				fieldName := field.Name.Value
-				key := e.getFieldKey(field)
+			switch sel := selection.(type) {
+			case *Field:
+				fieldName := sel.Name.Value
+				key := e.getFieldKey(sel)
 				// Get the field value from the map
 				fieldValue := m[fieldName]
 				// Recursively resolve if there's a nested selection set
-				if field.SelectionSet != nil && len(field.SelectionSet.Selections) > 0 {
-					result[key] = e.resolveNested(execCtx, field.SelectionSet, fieldValue)
+				if sel.SelectionSet != nil && len(sel.SelectionSet.Selections) > 0 {
+					result[key] = e.resolveNested(execCtx, sel.SelectionSet, fieldValue)
 				} else {
 					result[key] = fieldValue
+				}
+			case *FragmentSpread:
+				// Resolve fragment spread and merge results
+				fragmentResult := e.resolveNestedFragmentSpread(execCtx, sel, m)
+				for k, v := range fragmentResult {
+					result[k] = v
+				}
+			case *InlineFragment:
+				// Resolve inline fragment and merge results
+				fragmentResult := e.resolveNestedInlineFragment(execCtx, sel, m)
+				for k, v := range fragmentResult {
+					result[k] = v
 				}
 			}
 		}
@@ -213,6 +318,95 @@ func (e *Executor) resolveNested(execCtx *ExecutionContext, selectionSet *Select
 
 	// For other types, return as-is
 	return value
+}
+
+// resolveNestedFragmentSpread resolves a fragment spread in nested context.
+func (e *Executor) resolveNestedFragmentSpread(execCtx *ExecutionContext, spread *FragmentSpread, parent map[string]interface{}) map[string]interface{} {
+	// Find the fragment definition
+	fragmentName := spread.Name.Value
+	fragment := e.findFragmentDefinition(execCtx.Document, fragmentName)
+
+	if fragment == nil {
+		execCtx.addError(ExecutionError{
+			Message: fmt.Sprintf("Fragment '%s' is not defined", fragmentName),
+			Path:    []string{fragmentName},
+		})
+		return nil
+	}
+
+	// Determine the actual type from the parent object
+	actualType := ""
+	if tn, ok := parent["__typename"].(string); ok {
+		actualType = tn
+	}
+
+	// Check type condition if present
+	if fragment.TypeCondition != nil && fragment.TypeCondition.Name != nil {
+		if fragment.TypeCondition.Name.Value != actualType {
+			// Type doesn't match - return empty result
+			return nil
+		}
+	}
+
+	// Resolve the fragment's selection set against the parent data
+	return e.resolveFragmentSelectionSet(execCtx, fragment.SelectionSet, parent)
+}
+
+// resolveNestedInlineFragment resolves an inline fragment in nested context.
+func (e *Executor) resolveNestedInlineFragment(execCtx *ExecutionContext, fragment *InlineFragment, parent map[string]interface{}) map[string]interface{} {
+	// Determine the actual type from the parent object
+	actualType := ""
+	if tn, ok := parent["__typename"].(string); ok {
+		actualType = tn
+	}
+
+	// Check type condition
+	if fragment.TypeCondition != nil && fragment.TypeCondition.Name != nil {
+		if fragment.TypeCondition.Name.Value != actualType {
+			// Type doesn't match - return empty result
+			return nil
+		}
+	}
+
+	// Resolve the inline fragment's selection set against the parent data
+	return e.resolveFragmentSelectionSet(execCtx, fragment.SelectionSet, parent)
+}
+
+// resolveFragmentSelectionSet resolves a selection set against parent map data.
+func (e *Executor) resolveFragmentSelectionSet(execCtx *ExecutionContext, selectionSet *SelectionSet, parent map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+	if selectionSet == nil {
+		return result
+	}
+
+	for _, selection := range selectionSet.Selections {
+		switch sel := selection.(type) {
+		case *Field:
+			fieldName := sel.Name.Value
+			key := e.getFieldKey(sel)
+			// Get the field value from the parent
+			fieldValue := parent[fieldName]
+			// Recursively resolve if there's a nested selection set
+			if sel.SelectionSet != nil && len(sel.SelectionSet.Selections) > 0 {
+				result[key] = e.resolveNested(execCtx, sel.SelectionSet, fieldValue)
+			} else {
+				result[key] = fieldValue
+			}
+		case *FragmentSpread:
+			// Recursively resolve nested fragment spreads
+			nestedResult := e.resolveNestedFragmentSpread(execCtx, sel, parent)
+			for k, v := range nestedResult {
+				result[k] = v
+			}
+		case *InlineFragment:
+			// Recursively resolve nested inline fragments
+			nestedResult := e.resolveNestedInlineFragment(execCtx, sel, parent)
+			for k, v := range nestedResult {
+				result[k] = v
+			}
+		}
+	}
+	return result
 }
 
 // buildArguments builds the argument map from field arguments.

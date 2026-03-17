@@ -524,3 +524,296 @@ func TestIsNull(t *testing.T) {
 		t.Error("IsNull(0) should be false")
 	}
 }
+
+func TestExecutor_Execute_FragmentSpread(t *testing.T) {
+	exec := NewExecutor()
+
+	exec.RegisterResolver("Query", "user", func(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
+		return map[string]interface{}{
+			"__typename": "User",
+			"id":         "123",
+			"name":       "John",
+			"email":      "john@example.com",
+		}, nil
+	})
+
+	// Query using fragment spread
+	query := `
+		query {
+			user {
+				...UserFields
+			}
+		}
+		fragment UserFields on User {
+			id
+			name
+			email
+		}
+	`
+	parser := NewParserString(query)
+	doc, err := parser.Parse()
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	result := exec.Execute(context.Background(), doc, nil)
+	if result == nil {
+		t.Fatal("Execute returned nil")
+	}
+
+	if len(result.Errors) > 0 {
+		t.Errorf("Unexpected errors: %v", result.Errors)
+	}
+
+	data, ok := result.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected map data, got %T", result.Data)
+	}
+
+	user, ok := data["user"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected user map, got %T", data["user"])
+	}
+
+	if user["id"] != "123" {
+		t.Errorf("Expected id='123', got %v", user["id"])
+	}
+	if user["name"] != "John" {
+		t.Errorf("Expected name='John', got %v", user["name"])
+	}
+	if user["email"] != "john@example.com" {
+		t.Errorf("Expected email='john@example.com', got %v", user["email"])
+	}
+}
+
+func TestExecutor_Execute_InlineFragment(t *testing.T) {
+	exec := NewExecutor()
+
+	exec.RegisterResolver("Query", "user", func(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
+		return map[string]interface{}{
+			"__typename": "User",
+			"id":         "123",
+			"name":       "John",
+			"email":      "john@example.com",
+		}, nil
+	})
+
+	// Query using inline fragment
+	query := `
+		query {
+			user {
+				id
+				... on User {
+					name
+					email
+				}
+			}
+		}
+	`
+	parser := NewParserString(query)
+	doc, err := parser.Parse()
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	result := exec.Execute(context.Background(), doc, nil)
+	if result == nil {
+		t.Fatal("Execute returned nil")
+	}
+
+	if len(result.Errors) > 0 {
+		t.Errorf("Unexpected errors: %v", result.Errors)
+	}
+
+	data, ok := result.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected map data, got %T", result.Data)
+	}
+
+	user, ok := data["user"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected user map, got %T", data["user"])
+	}
+
+	if user["id"] != "123" {
+		t.Errorf("Expected id='123', got %v", user["id"])
+	}
+	if user["name"] != "John" {
+		t.Errorf("Expected name='John', got %v", user["name"])
+	}
+	if user["email"] != "john@example.com" {
+		t.Errorf("Expected email='john@example.com', got %v", user["email"])
+	}
+}
+
+func TestExecutor_Execute_InlineFragment_TypeConditionMismatch(t *testing.T) {
+	exec := NewExecutor()
+
+	// User has typename "User", but fragment is on "Admin"
+	exec.RegisterResolver("Query", "user", func(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
+		return map[string]interface{}{
+			"__typename": "User",
+			"id":         "123",
+			"name":       "John",
+		}, nil
+	})
+
+	// Query using inline fragment with mismatched type
+	query := `
+		query {
+			user {
+				id
+				... on Admin {
+					name
+				}
+			}
+		}
+	`
+	parser := NewParserString(query)
+	doc, err := parser.Parse()
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	result := exec.Execute(context.Background(), doc, nil)
+	if result == nil {
+		t.Fatal("Execute returned nil")
+	}
+
+	if len(result.Errors) > 0 {
+		t.Errorf("Unexpected errors: %v", result.Errors)
+	}
+
+	data, ok := result.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected map data, got %T", result.Data)
+	}
+
+	user, ok := data["user"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected user map, got %T", data["user"])
+	}
+
+	// id should be present
+	if user["id"] != "123" {
+		t.Errorf("Expected id='123', got %v", user["id"])
+	}
+
+	// name should NOT be present because fragment type condition doesn't match
+	if user["name"] != nil {
+		t.Errorf("Expected name to be nil due to type mismatch, got %v", user["name"])
+	}
+}
+
+func TestExecutor_Execute_UndefinedFragment(t *testing.T) {
+	exec := NewExecutor()
+
+	exec.RegisterResolver("Query", "user", func(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
+		return map[string]interface{}{"id": "123"}, nil
+	})
+
+	// Query using undefined fragment
+	query := `
+		query {
+			user {
+				...UndefinedFragment
+			}
+		}
+	`
+	parser := NewParserString(query)
+	doc, err := parser.Parse()
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	result := exec.Execute(context.Background(), doc, nil)
+	if result == nil {
+		t.Fatal("Execute returned nil")
+	}
+
+	// Should have error for undefined fragment
+	if len(result.Errors) == 0 {
+		t.Error("Expected error for undefined fragment")
+	}
+
+	foundFragmentError := false
+	for _, e := range result.Errors {
+		if e.Message == "Fragment 'UndefinedFragment' is not defined" {
+			foundFragmentError = true
+			break
+		}
+	}
+	if !foundFragmentError {
+		t.Errorf("Expected 'Fragment UndefinedFragment is not defined' error, got: %v", result.Errors)
+	}
+}
+
+func TestExecutor_Execute_MultipleFragmentSpreads(t *testing.T) {
+	exec := NewExecutor()
+
+	exec.RegisterResolver("Query", "user", func(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
+		return map[string]interface{}{
+			"__typename": "User",
+			"id":         "123",
+			"name":       "John",
+			"email":      "john@example.com",
+			"phone":      "555-1234",
+		}, nil
+	})
+
+	// Query using multiple fragment spreads
+	query := `
+		query {
+			user {
+				...BasicInfo
+				...ContactInfo
+			}
+		}
+		fragment BasicInfo on User {
+			id
+			name
+		}
+		fragment ContactInfo on User {
+			email
+			phone
+		}
+	`
+	parser := NewParserString(query)
+	doc, err := parser.Parse()
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	result := exec.Execute(context.Background(), doc, nil)
+	if result == nil {
+		t.Fatal("Execute returned nil")
+	}
+
+	if len(result.Errors) > 0 {
+		t.Errorf("Unexpected errors: %v", result.Errors)
+	}
+
+	data, ok := result.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected map data, got %T", result.Data)
+	}
+
+	user, ok := data["user"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected user map, got %T", data["user"])
+	}
+
+	// All fields from both fragments should be present
+	if user["id"] != "123" {
+		t.Errorf("Expected id='123', got %v", user["id"])
+	}
+	if user["name"] != "John" {
+		t.Errorf("Expected name='John', got %v", user["name"])
+	}
+	if user["email"] != "john@example.com" {
+		t.Errorf("Expected email='john@example.com', got %v", user["email"])
+	}
+	if user["phone"] != "555-1234" {
+		t.Errorf("Expected phone='555-1234', got %v", user["phone"])
+	}
+}

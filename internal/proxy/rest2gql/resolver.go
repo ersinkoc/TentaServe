@@ -15,10 +15,11 @@ import (
 
 // Resolver resolves GraphQL fields by dispatching REST calls.
 type Resolver struct {
-	client   *upstream.Client
-	baseURL  string
-	pathItem *openapi.PathItem
-	method   string
+	client    *upstream.Client
+	baseURL   string
+	path      string // The path pattern like "/users/{id}"
+	pathItem  *openapi.PathItem
+	method    string
 	operation *openapi.Operation
 }
 
@@ -26,6 +27,7 @@ type Resolver struct {
 type ResolverOptions struct {
 	BaseURL   string
 	Client    *upstream.Client
+	Path      string
 	PathItem  *openapi.PathItem
 	Method    string
 	Operation *openapi.Operation
@@ -36,6 +38,7 @@ func NewResolver(opts ResolverOptions) *Resolver {
 	return &Resolver{
 		client:    opts.Client,
 		baseURL:   opts.BaseURL,
+		path:      opts.Path,
 		pathItem:  opts.PathItem,
 		method:    opts.Method,
 		operation: opts.Operation,
@@ -99,7 +102,10 @@ func (r *Resolver) buildURL(args map[string]interface{}) (string, error) {
 
 	// Get the path - we need to reconstruct it from operation info
 	// For now, use the path pattern from the resolver
-	path := r.getPathPattern()
+	path := r.path
+	if path == "" {
+		path = "/"
+	}
 
 	// Interpolate path parameters
 	for _, param := range r.operation.Parameters {
@@ -130,15 +136,6 @@ func (r *Resolver) buildURL(args map[string]interface{}) (string, error) {
 	}
 
 	return url, nil
-}
-
-// getPathPattern returns the path pattern for this operation.
-// This is a placeholder - in practice, the path pattern would be stored
-// when the resolver is created.
-func (r *Resolver) getPathPattern() string {
-	// The path pattern would be set when creating the resolver
-	// For now, return a generic pattern
-	return "/"
 }
 
 // buildBody creates the request body for mutations.
@@ -273,6 +270,7 @@ func (b *ResolverBuilder) BuildRESTResolver(path string, method string, pathItem
 	return NewResolver(ResolverOptions{
 		BaseURL:   b.baseURL,
 		Client:    b.client,
+		Path:      path,
 		PathItem:  pathItem,
 		Method:    method,
 		Operation: operation,

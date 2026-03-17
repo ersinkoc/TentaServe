@@ -235,13 +235,12 @@ func (r *Resolver) resolveSchema(schema *SchemaObject, path string) error {
 			*schema = *resolvedSchema
 			// Clear the ref
 			schema.Ref = ""
-			// Cache the schema pointer before recursive resolution
-			// to detect circular refs
+			// Cache the schema pointer
 			r.resolved[ref] = schema
-			// Recursively resolve
-			if err := r.resolveSchema(schema, path); err != nil {
-				return err
-			}
+			// Note: We do NOT recursively resolve here.
+			// The properties will be resolved when they are iterated over
+			// in the ResolveAll loop, and proper circular ref detection
+			// will be applied at that time.
 		}
 		return nil // Schema refs replace the entire object
 	}

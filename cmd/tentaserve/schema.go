@@ -7,6 +7,8 @@ import (
 
 	"github.com/ersinkoc/tentaserve/internal/config"
 	"github.com/ersinkoc/tentaserve/internal/graphql"
+	"github.com/ersinkoc/tentaserve/internal/openapi"
+	"github.com/ersinkoc/tentaserve/internal/proxy/rest2gql"
 	"github.com/ersinkoc/tentaserve/internal/schema"
 )
 
@@ -28,7 +30,7 @@ func schemaCmd(args []string) error {
 	}
 
 	// Build schema from configuration
-	s, err := buildSchemaFromConfig(cfg, *upstreamFilter)
+	s, err := buildSchemaFromConfig(cfg, *upstreamFilter, nil)
 	if err != nil {
 		return fmt.Errorf("building schema: %w", err)
 	}
@@ -53,7 +55,7 @@ func schemaCmd(args []string) error {
 }
 
 // buildSchemaFromConfig builds a schema definition from configuration.
-func buildSchemaFromConfig(cfg *config.Config, upstreamFilter string) (*schema.SchemaDefinition, error) {
+func buildSchemaFromConfig(cfg *config.Config, upstreamFilter string, openAPIProvider *openapi.Provider) (*schema.SchemaDefinition, error) {
 	s := schema.NewSchemaDefinition()
 
 	// Add built-in scalars
@@ -71,7 +73,7 @@ func buildSchemaFromConfig(cfg *config.Config, upstreamFilter string) (*schema.S
 		// Build schema based on upstream type
 		switch upstream.Type {
 		case "rest":
-			if err := buildRESTUpstreamSchema(s, upstream); err != nil {
+			if err := buildRESTUpstreamSchema(s, upstream, openAPIProvider); err != nil {
 				return nil, fmt.Errorf("building REST schema for %s: %w", upstream.Name, err)
 			}
 		case "graphql":
@@ -98,10 +100,109 @@ func buildSchemaFromConfig(cfg *config.Config, upstreamFilter string) (*schema.S
 }
 
 // buildRESTUpstreamSchema builds schema from REST upstream configuration.
-func buildRESTUpstreamSchema(s *schema.SchemaDefinition, upstream config.UpstreamConfig) error {
-	// In a real implementation, this would parse the OpenAPI spec
-	// For now, create placeholder types based on the upstream name
+func buildRESTUpstreamSchema(s *schema.SchemaDefinition, upstream config.UpstreamConfig, openAPIProvider *openapi.Provider) error {
+	// Check if we have an OpenAPI spec for this upstream
+	if openAPIProvider != nil && openAPIProvider.HasSpec(upstream.Name) {
+		return buildRESTSchemaFromOpenAPI(s, upstream, openAPIProvider)
+	}
 
+	// Fall back to placeholder schema if no OpenAPI spec available
+	return buildPlaceholderRESTSchema(s, upstream)
+}
+
+// buildRESTSchemaFromOpenAPI builds a GraphQL schema from an OpenAPI spec.
+func buildRESTSchemaFromOpenAPI(s *schema.SchemaDefinition, upstream config.UpstreamConfig, openAPIProvider *openapi.Provider) error {
+	spec, ok := openAPIProvider.GetSpec(upstream.Name)
+	if !ok {
+		return fmt.Errorf("OpenAPI spec not found for upstream %s", upstream.Name)
+	}
+
+	// Use schema builder to convert OpenAPI to GraphQL
+	builder := rest2gql.NewSchemaBuilder(rest2gql.SchemaBuilderOptions{
+		TypePrefix: schema.ToPascalCase(upstream.Name),
+	})
+
+	schemaDef, err := builder.Build(spec)
+	if err != nil {
+		return fmt.Errorf("building GraphQL schema from OpenAPI: %w", err)
+	}
+
+	// Merge the built schema into our schema definition
+	for _, name := range schemaDef.AllTypes() {
+		if typeDef, ok := schemaDef.GetType(name); ok {
+			s.AddType(typeDef)
+		}
+	}
+
+	// Merge Query and Mutation fields
+	if schemaDef.Query != nil && len(schemaDef.Query.Fields) > 0 {
+		queryType, ok := s.GetType("Query")
+		if !ok {
+			queryType = &schema.TypeDef{
+				Name:   "Query",
+				Kind:   schema.TypeKindObject,
+				Fields: []*schema.FieldDef{},
+			}
+			s.AddType(queryType)
+		}
+
+		// Add upstream prefix to field names to avoid conflicts
+		for _, field := range schemaDef.Query.Fields {
+			// Clone field with prefixed name
+			prefixedField := &schema.FieldDef{
+				Name:        normalizeFieldName(upstream.Name) + "_" + field.Name,
+				Description: field.Description,
+				Type:        field.Type,
+				Arguments:   field.Arguments,
+			}
+			queryType.Fields = append(queryType.Fields, prefixedField)
+		}
+
+		if s.Query == nil {
+			s.Query = &schema.OperationDef{
+				Name: "Query",
+				Type: "query",
+			}
+		}
+		s.Query.Fields = queryType.Fields
+	}
+
+	if schemaDef.Mutation != nil && len(schemaDef.Mutation.Fields) > 0 {
+		mutationType, ok := s.GetType("Mutation")
+		if !ok {
+			mutationType = &schema.TypeDef{
+				Name:   "Mutation",
+				Kind:   schema.TypeKindObject,
+				Fields: []*schema.FieldDef{},
+			}
+			s.AddType(mutationType)
+		}
+
+		// Add upstream prefix to field names to avoid conflicts
+		for _, field := range schemaDef.Mutation.Fields {
+			prefixedField := &schema.FieldDef{
+				Name:        normalizeFieldName(upstream.Name) + "_" + field.Name,
+				Description: field.Description,
+				Type:        field.Type,
+				Arguments:   field.Arguments,
+			}
+			mutationType.Fields = append(mutationType.Fields, prefixedField)
+		}
+
+		if s.Mutation == nil {
+			s.Mutation = &schema.OperationDef{
+				Name: "Mutation",
+				Type: "mutation",
+			}
+		}
+		s.Mutation.Fields = mutationType.Fields
+	}
+
+	return nil
+}
+
+// buildPlaceholderRESTSchema creates a placeholder schema for REST upstreams without OpenAPI specs.
+func buildPlaceholderRESTSchema(s *schema.SchemaDefinition, upstream config.UpstreamConfig) error {
 	// Add a placeholder type for this upstream
 	upstreamType := &schema.TypeDef{
 		Name: upstream.Name + "Query",

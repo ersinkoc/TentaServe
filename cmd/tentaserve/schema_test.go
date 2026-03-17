@@ -22,7 +22,7 @@ func TestSchemaCmd(t *testing.T) {
 	}
 
 	// Build schema
-	s, err := buildSchemaFromConfig(cfg, "")
+	s, err := buildSchemaFromConfig(cfg, "", nil)
 	if err != nil {
 		t.Fatalf("Failed to build schema: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestSchemaCmdWithUpstreamFilter(t *testing.T) {
 	}
 
 	// Build schema with filter
-	s, err := buildSchemaFromConfig(cfg, "users-api")
+	s, err := buildSchemaFromConfig(cfg, "users-api", nil)
 	if err != nil {
 		t.Fatalf("Failed to build schema: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestSchemaToJSON(t *testing.T) {
 		},
 	}
 
-	s, err := buildSchemaFromConfig(cfg, "")
+	s, err := buildSchemaFromConfig(cfg, "", nil)
 	if err != nil {
 		t.Fatalf("Failed to build schema: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestBuildRESTUpstreamSchema(t *testing.T) {
 		BaseURL: "http://localhost:8080",
 	}
 
-	err := buildRESTUpstreamSchema(s, upstream)
+	err := buildRESTUpstreamSchema(s, upstream, nil)
 	if err != nil {
 		t.Fatalf("Failed to build REST schema: %v", err)
 	}

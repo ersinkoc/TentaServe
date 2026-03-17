@@ -41,6 +41,16 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
+	case "schema":
+		if err := schemaCmd(os.Args[2:]); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "tools":
+		if err := toolsCmd(os.Args[2:]); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	case "version":
 		printVersion()
 	case "help", "-h", "--help":
@@ -183,10 +193,11 @@ func createHandler(cfg *config.Config, logger *observability.Logger) http.Handle
 
 	// Apply middleware chain
 	requestID := middleware.NewRequestID(cfg.Observability.RequestID.Header)
-	handler := middleware.Chain(mux,
+	chain := middleware.NewChain(
 		requestID.Wrap,
 		loggingMiddleware(logger),
 	)
+	handler := chain.Then(mux)
 
 	return handler
 }
@@ -216,11 +227,16 @@ Usage:
 Commands:
   serve      Start the gateway server
   validate   Validate configuration file
+  schema     Show generated GraphQL schema
+  tools      List MCP tools generated from upstreams
   version    Print version information
   help       Show this help message
 
 Examples:
   tentaserve serve --config tentaserve.yaml
   tentaserve serve --port 9090
-  tentaserve validate --config tentaserve.yaml`)
+  tentaserve validate --config tentaserve.yaml
+  tentaserve schema --upstream users-api
+  tentaserve tools --format table
+  tentaserve tools --upstream users-api --format json`)
 }

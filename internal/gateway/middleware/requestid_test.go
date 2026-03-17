@@ -107,7 +107,7 @@ func TestChain(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	chained := Chain(handler, middleware1, middleware2)
+	chained := NewChain(middleware1, middleware2).Then(handler)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	rec := httptest.NewRecorder()

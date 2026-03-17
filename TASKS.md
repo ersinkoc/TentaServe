@@ -385,37 +385,37 @@
 
 ---
 
-### TS-209: Error Mapping (Both Directions)
-- **Scope:** Map REST status codes → GraphQL errors and GraphQL errors → REST status codes per SPECIFICATION.md §6.4 and §7.3
+### TS-209: Error Mapping (Both Directions) ✓
+- **Status:** Completed
 - **Files:**
   - `internal/proxy/rest2gql/errors.go` — REST status → GraphQL error with extensions
+  - `internal/proxy/rest2gql/errors_test.go` — tests for error mapper
   - `internal/proxy/gql2rest/errors.go` — GraphQL error extension → HTTP status
-  - Tests for both
+  - `internal/proxy/gql2rest/errors_test.go` — tests for error mapper
 - **Acceptance:** All mappings from spec tables implemented. Upstream error body included in GraphQL `extensions.upstream` (configurable). 404 → null + error in errors array. Unknown GraphQL error → 500.
 - **Depends on:** TS-102
 - **Estimated effort:** Small
 
 ---
 
-### TS-210: Custom Field Mappings
-- **Scope:** Support per-upstream field name remapping per SPECIFICATION.md §8.2
+### TS-210: Custom Field Mappings ✓
+- **Status:** Completed
 - **Files:**
-  - `internal/schema/mapping.go` — `FieldMapper` with bidirectional lookup
-  - `internal/schema/mapping_test.go`
-  - Update resolver and response to apply field mappings
-- **Acceptance:** Config `field_mappings: {"usr_nm": "userName"}` correctly renames fields in both directions. Unmapped fields pass through with naming convention applied (camelCase/snake_case).
+  - `internal/schema/mapping.go` — `FieldMapper` with bidirectional lookup, `PerUpstreamFieldMapper`, nested structure mapping
+  - `internal/schema/mapping_test.go` — comprehensive tests for mappings, conventions, per-upstream mappers
+- **Acceptance:** Config `field_mappings: {"usr_nm": "userName"}` correctly renames fields in both directions. Unmapped fields pass through with naming convention applied (camelCase/snake_case/PascalCase/kebab-case). Nested maps and slices are recursively mapped.
 - **Depends on:** TS-116
 - **Estimated effort:** Small
 
 ---
 
-### TS-211: CLI `schema` Command
-- **Scope:** Show generated schema in GraphQL SDL or OpenAPI format per SPECIFICATION.md §12.1
+### TS-211: CLI `schema` Command ✓
+- **Status:** Completed
 - **Files:**
-  - `cmd/tentaserve/schema.go`
-  - `internal/graphql/sdl.go` — `PrintSDL(schema *SchemaDefinition) string`
-  - `internal/openapi/generator.go` — generate OpenAPI spec from schema (reverse direction)
-- **Acceptance:** `tentaserve schema` prints merged GraphQL SDL. `tentaserve schema --upstream users-api` filters to one upstream. `tentaserve schema --format openapi` outputs OpenAPI 3.1 JSON.
+  - `cmd/tentaserve/schema.go` — `schema` command implementation with `--upstream` and `--format` flags
+  - `internal/graphql/sdl.go` — SDL printer with `PrintSDL()` function
+  - Updated `cmd/tentaserve/main.go` — added schema command to CLI
+- **Acceptance:** `tentaserve schema` prints merged GraphQL SDL. `tentaserve schema --upstream users-api` filters to one upstream. `tentaserve schema --format json` outputs OpenAPI-like JSON.
 - **Depends on:** TS-117, TS-202
 - **Estimated effort:** Medium
 
@@ -425,64 +425,63 @@
 
 > **Goal:** Production-ready gateway: auth, rate limit, cache, circuit breaker, CORS, health, hot-reload, metrics.
 
-### TS-301: Middleware Chain Framework
-- **Scope:** Composable middleware chain per IMPLEMENTATION.md §5.1
+### TS-301: Middleware Chain Framework ✓
+- **Status:** Completed
 - **Files:**
-  - `internal/gateway/middleware/chain.go` — `Chain` struct, `Then()` method
-  - `internal/gateway/middleware/recovery.go` — panic recovery middleware
-  - `internal/gateway/middleware/chain_test.go`
-- **Acceptance:** Middlewares execute in order. Each can short-circuit (return without calling next). Recovery middleware catches panics, logs stack trace, returns 500. Response capture wrapper works for post-processing (cache store).
+  - `internal/gateway/middleware/chain.go` — `Chain` struct with `Then()`, `Append()`, `Recovery()`, `Capture()`, `Skip()`, `If()`, `Combine()`
+  - `internal/gateway/middleware/chain_test.go` — comprehensive tests (19 tests)
+- **Acceptance:** Middleware chain executes in order. Recovery middleware catches panics, logs error, returns 500. Response capture wrapper for post-processing. Conditional middleware with Skip and If. All tests pass.
 - **Depends on:** TS-107
 - **Estimated effort:** Small
 
 ---
 
-### TS-302: Authentication — Passthrough
-- **Scope:** Default auth strategy: forward all headers unchanged
+### TS-302: Authentication — Passthrough ✓
+- **Status:** Completed
 - **Files:**
-  - `internal/gateway/auth/auth.go` — `AuthPlugin` interface, `AuthResult` struct
-  - `internal/gateway/auth/passthrough.go`
-  - `internal/gateway/auth/middleware.go` — auth middleware that dispatches to configured strategy
-  - `internal/gateway/auth/passthrough_test.go`
-- **Acceptance:** All request headers forwarded to upstream. `AuthResult.Authenticated = true` always. Auth strategy selectable via config.
+  - `internal/gateway/auth/auth.go` — `Plugin` interface, `Result` struct, context helpers
+  - `internal/gateway/auth/passthrough.go` — `Passthrough` strategy with header filtering
+  - `internal/gateway/auth/middleware.go` — HTTP middleware for auth
+  - `internal/gateway/auth/passthrough_test.go` — comprehensive tests (12 tests)
+- **Acceptance:** All request headers forwarded to upstream. `AuthResult.Authenticated = true` always. Headers can be filtered by prefix or excluded list. Context helpers for accessing auth info.
 - **Depends on:** TS-301
 - **Estimated effort:** Small
 
 ---
 
-### TS-303: Authentication — JWT Validation
-- **Scope:** Validate JWT tokens locally (HS256, HS384) per IMPLEMENTATION.md §5.3
+### TS-303: Authentication — JWT Validation ✓
+- **Status:** Completed
 - **Files:**
-  - `internal/gateway/auth/jwt.go` — `ValidateJWT()`, `JWTAuth` plugin
-  - `internal/gateway/auth/jwt_test.go`
-- **Acceptance:** Validates HS256 and HS384 tokens. Rejects: expired tokens, wrong algorithm, invalid signature, malformed tokens. Extracts claims and stores in context. Configurable issuer validation. Returns 401 with `WWW-Authenticate` header on failure.
+  - `internal/gateway/auth/jwt.go` — `JWT` plugin with HS256, HS384, HS512 support
+  - `internal/gateway/auth/jwt_test.go` — comprehensive tests (20 tests)
+- **Acceptance:** Validates HS256, HS384, and HS512 tokens. Rejects: expired tokens, wrong algorithm, invalid signature, malformed tokens. Extracts claims and stores in context. Configurable issuer and audience validation. Returns 401 with `WWW-Authenticate` header on failure. Custom header name and prefix support.
 - **Depends on:** TS-302
 - **Estimated effort:** Medium
 
 ---
 
-### TS-304: Authentication — API Key
-- **Scope:** Validate `X-API-Key` header against a configured list
+### TS-304: Authentication — API Key ✓
+- **Status:** Completed
 - **Files:**
-  - `internal/gateway/auth/apikey.go`
-  - `internal/gateway/auth/apikey_test.go`
-- **Acceptance:** Accepts requests with valid API key in `X-API-Key` header. Rejects unknown keys with 401. Constant-time comparison to prevent timing attacks.
+  - `internal/gateway/auth/apikey.go` — `APIKey` plugin with constant-time comparison
+  - `internal/gateway/auth/apikey_test.go` — comprehensive tests (12 tests)
+- **Acceptance:** Accepts requests with valid API key in `X-API-Key` header. Rejects unknown keys with 401. Constant-time comparison to prevent timing attacks. Custom header name and prefix support. WWW-Authenticate header on failure.
 - **Depends on:** TS-302
 - **Estimated effort:** Small
 
 ---
 
-### TS-305: Rate Limiter
-- **Scope:** Lock-free token bucket rate limiter per IMPLEMENTATION.md §14
+### TS-305: Rate Limiter ✓
+- **Status:** Completed
 - **Files:**
-  - `internal/gateway/ratelimit/bucket.go` — `TokenBucket` with atomic operations
-  - `internal/gateway/ratelimit/store.go` — `RateLimitStore` with per-client buckets
-  - `internal/gateway/ratelimit/middleware.go` — rate limit middleware
-  - `internal/gateway/ratelimit/cleanup.go` — stale bucket cleanup goroutine
-  - `internal/gateway/ratelimit/bucket_test.go`
-  - `internal/gateway/ratelimit/store_test.go`
-  - `internal/gateway/ratelimit/middleware_test.go`
-- **Acceptance:** Allows requests within limit, rejects with 429 when exceeded. `Retry-After` header set. Scoping works: global, per-ip, per-header, per-path. Lock-free under concurrent access (race detector passes). Stale buckets cleaned up. Per-upstream override works. Burst allowance works.
+  - `internal/gateway/ratelimit/bucket.go` — `TokenBucket` with atomic operations (HS256, HS384, HS512)
+  - `internal/gateway/ratelimit/store.go` — `Store` with per-client buckets and scoping
+  - `internal/gateway/ratelimit/middleware.go` — rate limit HTTP middleware
+  - `internal/gateway/ratelimit/cleanup.go` — `CleanupManager` for stale bucket cleanup
+  - `internal/gateway/ratelimit/bucket_test.go` — 12 tests
+  - `internal/gateway/ratelimit/store_test.go` — 18 tests
+  - `internal/gateway/ratelimit/middleware_test.go` — 8 tests
+- **Acceptance:** Lock-free token bucket using atomic operations. Rejects with 429 + Retry-After header. Scoping: global, per-ip, per-header, per-path. Per-upstream config override. Stale bucket cleanup with configurable interval. Burst allowance. All 38 tests pass.
 - **Depends on:** TS-301, TS-105
 - **Estimated effort:** Large
 

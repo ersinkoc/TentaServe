@@ -54,13 +54,3 @@ func GenerateRequestID() string {
 	_, _ = rand.Read(b) // crypto/rand never fails on modern OS
 	return "req_" + hex.EncodeToString(b)
 }
-
-// Chain combines multiple middleware into a single handler.
-// Middleware is applied in reverse order, so the first middleware
-// in the list is the outermost wrapper.
-func Chain(h http.Handler, middleware ...func(http.Handler) http.Handler) http.Handler {
-	for i := len(middleware) - 1; i >= 0; i-- {
-		h = middleware[i](h)
-	}
-	return h
-}

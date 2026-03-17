@@ -8,12 +8,13 @@ import (
 
 	"github.com/ersinkoc/tentaserve/internal/graphql"
 	"github.com/ersinkoc/tentaserve/internal/openapi"
+	"github.com/ersinkoc/tentaserve/internal/proxy/gql2rest"
 	"github.com/ersinkoc/tentaserve/internal/proxy/rest2gql"
 	"github.com/ersinkoc/tentaserve/internal/schema"
 	"github.com/ersinkoc/tentaserve/internal/upstream"
 )
 
-// Proxy is the main REST→GraphQL proxy that orchestrates query translation.
+// Proxy is the main REST↔GraphQL proxy that orchestrates query translation.
 type Proxy struct {
 	// Schema definition built from OpenAPI specs
 	schemaDef *schema.SchemaDefinition
@@ -27,8 +28,11 @@ type Proxy struct {
 	// Upstream clients by name
 	upstreams map[string]*upstream.Client
 
-	// Translator for handling GraphQL requests
+	// Translator for handling GraphQL requests (REST→GraphQL)
 	translator *rest2gql.Translator
+
+	// GQL→REST handler for exposing GraphQL as REST
+	gql2restHandler *gql2rest.Handler
 
 	// Base URL for this proxy (used for building URLs)
 	baseURL string
@@ -184,4 +188,33 @@ func (p *Proxy) ResolverCount() int {
 		count++
 	})
 	return count
+}
+
+// SetGQL2RESTHandler configures the GQL→REST handler.
+func (p *Proxy) SetGQL2RESTHandler(handler *gql2rest.Handler) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.gql2restHandler = handler
+}
+
+// GetGQL2RESTHandler returns the GQL→REST handler.
+func (p *Proxy) GetGQL2RESTHandler() *gql2rest.Handler {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.gql2restHandler
+}
+
+// HandleREST handles REST HTTP requests (GQL→REST mode).
+// This exposes GraphQL operations as REST endpoints.
+func (p *Proxy) HandleREST(w http.ResponseWriter, r *http.Request) {
+	p.mu.RLock()
+	handler := p.gql2restHandler
+	p.mu.RUnlock()
+
+	if handler == nil {
+		http.Error(w, "GQL→REST handler not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	handler.ServeHTTP(w, r)
 }

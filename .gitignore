@@ -1,0 +1,50 @@
+# Binaries
+bin/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+coverage.html
+coverage.out
+
+# Profiling artifacts
+*.prof
+*.pprof
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+
+# Config (local)
+tentaserve.yaml
+tentaserve.local.yaml
+*.local.yaml
+*.local.yml
+*.local.json
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Go workspace (if used)
+go.work
+go.work.sum
+
+# Dependencies (should be fetched via go mod)
+/vendor/

@@ -1,0 +1,102 @@
+# Tentaserve - LLMs Context File
+# This file provides context for AI assistants working on the Tentaserve project.
+
+## Project Overview
+
+Tentaserve is a self-hosted, zero-external-dependency API gateway written in Go.
+It provides bi-directional protocol translation between REST and GraphQL,
+with built-in MCP (Model Context Protocol) server support for AI agents.
+
+## Architecture
+
+- **Language:** Go 1.22+
+- **Dependencies:** Zero external dependencies (stdlib only)
+- **Build:** Single static binary, CGO disabled
+- **Deployment:** Docker optional, can run anywhere
+
+## Key Components
+
+### Gateway Layer
+- Request routing and classification
+- Middleware chain (auth, rate limit, cache, circuit breaker)
+- Protocol detection (REST vs GraphQL vs MCP)
+
+### Translation Layers
+- **REST→GraphQL:** Parses OpenAPI specs, generates GraphQL schema
+- **GraphQL→REST:** Introspects GraphQL, exposes as REST endpoints
+- Both directions support full CRUD operations
+
+### MCP Server
+- Exposes all APIs as MCP tools for AI agents
+- Auto-discovery from OpenAPI/GraphQL schemas
+- Supports tools, resources, prompts, and sampling
+
+### Schema Engine
+- Unified type system for both REST and GraphQL
+- DataLoader for N+1 prevention
+- Relationship detection from URL patterns
+
+## Project Structure
+
+```
+cmd/tentaserve/       # Main entry point
+internal/
+  config/             # Configuration loading (YAML, env vars)
+  gateway/            # HTTP gateway, middleware
+  graphql/            # GraphQL lexer, parser, executor
+  openapi/            # OpenAPI spec parser
+  proxy/              # Protocol translation
+  schema/             # Unified type system
+  server/             # HTTP server setup
+  upstream/           # Upstream HTTP clients
+  observability/      # Logging, metrics, health
+```
+
+## Constraints
+
+1. **Zero Dependencies:** Only Go standard library
+2. **Single Binary:** No external files required at runtime
+3. **Go 1.22+:** Uses new routing features, log/slog
+4. **CGO Disabled:** Fully static, portable builds
+
+## Configuration
+
+- YAML-based configuration
+- Environment variable interpolation: `${VAR}` or `${VAR:default}`
+- Hot-reload of upstream schemas (not config file)
+
+## Build Commands
+
+```bash
+make build          # Build binary
+make test           # Run tests
+make build-all      # Cross-compile for all platforms
+make docker         # Build Docker image
+```
+
+## Testing Strategy
+
+- Unit tests co-located with source (`*_test.go`)
+- `httptest.Server` for HTTP mocking
+- Table-driven tests preferred
+- No external test libraries
+
+## Code Style
+
+- **Errors:** Typed sentinel errors, `errors.Is()` for checking
+- **Context:** First param for all I/O functions
+- **Naming:** `snake_case` files, `PascalCase` exported, `camelCase` private
+- **Comments:** Package doc comments required
+
+## MCP Integration
+
+Tentaserve exposes every upstream endpoint as an MCP tool:
+- REST endpoints → `get_user_by_id`, `create_order`
+- GraphQL queries/mutations → `search_products`, `update_profile`
+- AI agents discover and call without manual configuration
+
+## Resources
+
+- Repository: github.com/ersinkoc/tentaserve
+- Website: tentaserve.dev
+- Docs: tentaserve.dev/docs

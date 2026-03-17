@@ -3,6 +3,7 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 // ListToolsRequest is the request for tools/list method.
@@ -29,6 +30,11 @@ func (s *Server) RegisterToolsHandlers(registry *ToolRegistry) {
 
 		// Get all tools from registry
 		tools := registry.List()
+
+		// Update registered tools gauge
+		if s.metrics != nil {
+			s.metrics.UpdateToolCount(len(tools))
+		}
 
 		// Pagination is not implemented yet - return all tools
 		// In the future, we could use listReq.Cursor for pagination
@@ -63,8 +69,16 @@ func (s *Server) RegisterToolsHandlers(registry *ToolRegistry) {
 			}, nil
 		}
 
-		// Execute the tool
+		// Execute the tool and record metrics
+		start := time.Now()
 		result, err := executeTool(tool, callReq.Arguments)
+		duration := time.Since(start)
+
+		// Record metrics
+		if s.metrics != nil {
+			s.metrics.RecordToolCall(tool.Name, tool.Upstream, duration)
+		}
+
 		if err != nil {
 			return &CallToolResult{
 				Content: []ToolContent{NewErrorContent(err.Error())},
@@ -218,6 +232,11 @@ func (s *Server) RegisterResourcesHandlers(resources []*Resource) {
 			}
 		}
 
+		// Update registered resources gauge
+		if s.metrics != nil {
+			s.metrics.UpdateResourceCount(len(resources))
+		}
+
 		// Return all resources (pagination not implemented)
 		result := &ListResourcesResult{
 			Resources:  resources,
@@ -252,6 +271,11 @@ func (s *Server) RegisterResourcesHandlers(resources []*Resource) {
 
 		if resource == nil {
 			return nil, NewErrorWithData(ErrInvalidParams, fmt.Sprintf("Resource '%s' not found", readReq.URI), nil)
+		}
+
+		// Record resource read metric
+		if s.metrics != nil {
+			s.metrics.RecordResourceRead(resource.URI)
 		}
 
 		// For now, return a stub response

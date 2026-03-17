@@ -44,6 +44,7 @@ type GatewayConfig struct {
 	RateLimit       RateLimitConfig        `yaml:"rate_limit"`
 	CircuitBreaker  CircuitBreakerConfig   `yaml:"circuit_breaker"`
 	Cache           CacheConfig            `yaml:"cache"`
+	Auth            GatewayAuthConfig      `yaml:"auth"`
 }
 
 // RateLimitConfig contains rate limiting settings.
@@ -59,6 +60,32 @@ type CircuitBreakerConfig struct {
 	FailureThreshold int           `yaml:"failure_threshold"`
 	ResetTimeout     time.Duration `yaml:"reset_timeout"`
 	HalfOpenRequests int           `yaml:"half_open_requests"`
+}
+
+// GatewayAuthConfig contains authentication settings for the gateway.
+type GatewayAuthConfig struct {
+	Strategy string         `yaml:"strategy"` // "passthrough", "jwt", "apikey"
+	JWT      JWTConfig      `yaml:"jwt"`
+	APIKey   APIKeyConfig   `yaml:"apikey"`
+}
+
+// JWTConfig contains JWT authentication settings.
+type JWTConfig struct {
+	Enabled           bool     `yaml:"enabled"`
+	Secret            string   `yaml:"secret"`
+	Issuer            string   `yaml:"issuer"`
+	Audience          string   `yaml:"audience"`
+	AllowedAlgorithms []string `yaml:"allowed_algorithms"`
+	HeaderName        string   `yaml:"header_name"`
+	HeaderPrefix      string   `yaml:"header_prefix"`
+}
+
+// APIKeyConfig contains API key authentication settings.
+type APIKeyConfig struct {
+	Enabled    bool              `yaml:"enabled"`
+	Keys       []string          `yaml:"keys"`
+	HeaderName string            `yaml:"header_name"`
+	KeyMap     map[string]string `yaml:"key_map"` // key -> subject mapping
 }
 
 // CacheConfig contains caching settings.

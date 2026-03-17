@@ -19,6 +19,7 @@ type SSETransport struct {
 	sessions   map[string]*SSESession
 	sessionsMu sync.RWMutex
 	endpoint   string
+	metrics    *Metrics
 }
 
 // SSESession represents an active SSE connection.
@@ -46,6 +47,7 @@ func NewSSETransport(server *Server, logger *slog.Logger, endpoint string) *SSET
 		logger:   logger,
 		sessions: make(map[string]*SSESession),
 		endpoint: endpoint,
+		metrics:  server.metrics,
 	}
 }
 
@@ -90,12 +92,22 @@ func (t *SSETransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 	t.sessions[sessionID] = session
 	t.sessionsMu.Unlock()
 
+	// Record connection metric
+	if t.metrics != nil {
+		t.metrics.RecordSSEConnection()
+	}
+
 	// Cleanup on disconnect
 	defer func() {
 		t.sessionsMu.Lock()
 		delete(t.sessions, sessionID)
 		t.sessionsMu.Unlock()
 		close(session.Done)
+
+		// Record disconnection metric
+		if t.metrics != nil {
+			t.metrics.RecordSSEDisconnection()
+		}
 	}()
 
 	// Send endpoint event

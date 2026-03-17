@@ -9,8 +9,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/ersinkoc/tentaserve/internal/config"
+	"github.com/ersinkoc/tentaserve/internal/gateway/auth"
+	"github.com/ersinkoc/tentaserve/internal/gateway/metrics"
 	"github.com/ersinkoc/tentaserve/internal/gateway/middleware"
 	"github.com/ersinkoc/tentaserve/internal/observability"
 	"github.com/ersinkoc/tentaserve/internal/server"
@@ -48,6 +51,11 @@ func main() {
 		}
 	case "tools":
 		if err := toolsCmd(os.Args[2:]); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	case "jwt":
+		if err := jwtCmd(os.Args[2:]); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -100,8 +108,20 @@ func serveCmd(args []string) error {
 		slog.String("addr", fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)),
 	)
 
-	// Create a simple handler (placeholder for actual gateway)
-	handler := createHandler(cfg, logger)
+	// Create metrics registry if enabled
+	var metricsReg *metrics.Registry
+	if cfg.Observability.Metrics.Enabled {
+		metricsReg = metrics.NewRegistry()
+	}
+
+	// Create MCP server if enabled
+	mcpServer, err := NewMCPServer(cfg, logger.Logger, metricsReg)
+	if err != nil {
+		logger.Warn("failed to create MCP server", slog.Any("error", err))
+	}
+
+	// Create handler with MCP integration
+	handler := createHandler(cfg, logger, mcpServer, metricsReg)
 
 	// Create server
 	srv := server.New(cfg, handler, logger.Logger)
@@ -116,6 +136,16 @@ func serveCmd(args []string) error {
 	go func() {
 		sig := <-sigCh
 		logger.Info("received signal", slog.String("signal", sig.String()))
+
+		// Shutdown MCP server
+		if mcpServer != nil {
+			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer shutdownCancel()
+			if err := mcpServer.Shutdown(shutdownCtx); err != nil {
+				logger.Warn("MCP server shutdown error", slog.Any("error", err))
+			}
+		}
+
 		cancel()
 	}()
 
@@ -152,7 +182,7 @@ func validateCmd(args []string) error {
 	return nil
 }
 
-func createHandler(cfg *config.Config, logger *observability.Logger) http.Handler {
+func createHandler(cfg *config.Config, logger *observability.Logger, mcpServer *MCPServer, metricsReg *metrics.Registry) http.Handler {
 	// Create a basic handler
 	mux := http.NewServeMux()
 
@@ -163,33 +193,36 @@ func createHandler(cfg *config.Config, logger *observability.Logger) http.Handle
 		w.Write([]byte(`{"status":"healthy"}`))
 	})
 
-	// Metrics endpoint (placeholder)
-	mux.HandleFunc("GET /-/metrics", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("# Tentaserve metrics\n"))
-	})
+	// Metrics endpoint
+	if cfg.Observability.Metrics.Enabled && metricsReg != nil {
+		mux.Handle("GET "+cfg.Observability.Metrics.Path, metricsReg.Handler())
+	} else {
+		mux.HandleFunc("GET /-/metrics", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("# Metrics disabled\n"))
+		})
+	}
 
-	// GraphQL endpoint (placeholder)
-	mux.HandleFunc("POST "+cfg.Gateway.GraphQLPath, func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"data":null}`))
-	})
+	// GraphQL endpoint - create real handler with resolvers
+	graphqlHandler := createGraphQLHandler(cfg, logger.Logger)
+	mux.Handle("POST "+cfg.Gateway.GraphQLPath, graphqlHandler)
 
-	// MCP endpoint (placeholder)
-	mux.HandleFunc("POST "+cfg.Gateway.MCPPath, func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"tools":[]}`))
-	})
+	// MCP endpoint - integrate with MCP server if enabled
+	if mcpServer != nil && cfg.MCP.Enabled {
+		mcpServer.RegisterHandlers(mux, cfg.Gateway.MCPPath)
+	} else {
+		// Fallback placeholder
+		mux.HandleFunc("POST "+cfg.Gateway.MCPPath, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"jsonrpc":"2.0","error":{"code":-32601,"message":"MCP not enabled"},"id":null}`))
+		})
+	}
 
-	// REST endpoints (placeholder)
-	mux.HandleFunc(cfg.Gateway.RESTPrefix+"/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"message":"REST endpoint"}`))
-	})
+	// REST endpoints - create handler with upstream routing
+	restHandler := NewRESTHandler(cfg, logger.Logger)
+	mux.Handle(cfg.Gateway.RESTPrefix+"/", restHandler)
 
 	// Apply middleware chain
 	requestID := middleware.NewRequestID(cfg.Observability.RequestID.Header)
@@ -197,9 +230,67 @@ func createHandler(cfg *config.Config, logger *observability.Logger) http.Handle
 		requestID.Wrap,
 		loggingMiddleware(logger),
 	)
+
+	// Add auth middleware if configured
+	authMiddleware := createAuthMiddleware(cfg, logger)
+	if authMiddleware != nil {
+		chain = middleware.NewChain(
+			requestID.Wrap,
+			authMiddleware.Wrap,
+			loggingMiddleware(logger),
+		)
+	}
+
 	handler := chain.Then(mux)
 
 	return handler
+}
+
+// createAuthMiddleware creates authentication middleware based on config.
+func createAuthMiddleware(cfg *config.Config, logger *observability.Logger) *auth.Middleware {
+	if !cfg.Gateway.Auth.JWT.Enabled && !cfg.Gateway.Auth.APIKey.Enabled {
+		return nil
+	}
+
+	var plugin auth.Plugin
+
+	switch cfg.Gateway.Auth.Strategy {
+	case "jwt":
+		if cfg.Gateway.Auth.JWT.Secret == "" {
+			logger.Warn("JWT auth enabled but no secret configured")
+			return nil
+		}
+		jwtConfig := auth.NewJWT([]byte(cfg.Gateway.Auth.JWT.Secret))
+		jwtConfig.Issuer = cfg.Gateway.Auth.JWT.Issuer
+		jwtConfig.Audience = cfg.Gateway.Auth.JWT.Audience
+		if len(cfg.Gateway.Auth.JWT.AllowedAlgorithms) > 0 {
+			jwtConfig.AllowedAlgorithms = cfg.Gateway.Auth.JWT.AllowedAlgorithms
+		}
+		if cfg.Gateway.Auth.JWT.HeaderName != "" {
+			jwtConfig.HeaderName = cfg.Gateway.Auth.JWT.HeaderName
+		}
+		if cfg.Gateway.Auth.JWT.HeaderPrefix != "" {
+			jwtConfig.HeaderPrefix = cfg.Gateway.Auth.JWT.HeaderPrefix
+		}
+		plugin = jwtConfig
+		logger.Info("JWT authentication enabled",
+			slog.String("issuer", jwtConfig.Issuer),
+			slog.String("audience", jwtConfig.Audience),
+		)
+	case "apikey":
+		if len(cfg.Gateway.Auth.APIKey.Keys) == 0 && len(cfg.Gateway.Auth.APIKey.KeyMap) == 0 {
+			logger.Warn("API Key auth enabled but no keys configured")
+			return nil
+		}
+		// Note: APIKey plugin implementation would go here
+		// For now, fall through to passthrough
+		plugin = auth.NewPassthrough()
+	default:
+		// Default to passthrough
+		plugin = auth.NewPassthrough()
+	}
+
+	return auth.NewMiddleware(plugin, logger.Logger)
 }
 
 func loggingMiddleware(logger *observability.Logger) func(http.Handler) http.Handler {
@@ -229,6 +320,7 @@ Commands:
   validate   Validate configuration file
   schema     Show generated GraphQL schema
   tools      List MCP tools generated from upstreams
+  jwt        JWT token utilities (generate, validate, decode)
   version    Print version information
   help       Show this help message
 
@@ -238,5 +330,6 @@ Examples:
   tentaserve validate --config tentaserve.yaml
   tentaserve schema --upstream users-api
   tentaserve tools --format table
-  tentaserve tools --upstream users-api --format json`)
+  tentaserve jwt generate --secret mysecret --subject user123
+  tentaserve jwt validate --token eyJ... --secret mysecret`)
 }

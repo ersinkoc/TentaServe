@@ -159,13 +159,125 @@ AI agents can discover and use your APIs automatically:
 
 ---
 
-## Documentation
+## Architecture
 
-- [Configuration Guide](https://tentaserve.dev/docs/config)
-- [REST to GraphQL](https://tentaserve.dev/docs/rest-to-graphql)
-- [GraphQL to REST](https://tentaserve.dev/docs/graphql-to-rest)
-- [MCP Integration](https://tentaserve.dev/docs/mcp)
-- [Deployment](https://tentaserve.dev/docs/deployment)
+```
+                  Clients
+        GraphQL │ REST │ MCP/AI
+            │        │       │
+            v        v       v
+   ┌─────────────────────────────────┐
+   │       HTTP/HTTPS Server         │
+   │         Request Router          │
+   └────────┬────────┬────────┬──────┘
+            │        │        │
+            v        v        v
+   ┌─────────────────────────────────┐
+   │      Gateway Middleware         │
+   │  RequestID > Auth > RateLimit   │
+   │  > Cache > CircuitBreaker       │
+   └────────┬────────┬────────┬──────┘
+            │        │        │
+   ┌────────┘   ┌────┘   ┌───┘
+   v            v         v
+┌──────┐  ┌──────┐  ┌─────────┐
+│GraphQL│  │ REST │  │   MCP   │
+│Handler│  │Handler│ │Handler  │
+└───┬───┘  └───┬──┘  └────┬───┘
+    │          │           │
+    v          v           v
+┌─────────────────────────────────┐
+│     Schema Engine / Proxy       │
+│  REST<>GraphQL Translation      │
+│  DataLoader / Query Planner     │
+└────────┬───────────┬────────────┘
+         │           │
+         v           v
+   ┌──────────┐ ┌────────────┐
+   │ REST APIs│ │GraphQL APIs│
+   └──────────┘ └────────────┘
+```
+
+---
+
+## CLI Commands
+
+```bash
+tentaserve serve      # Start the gateway
+tentaserve validate   # Validate configuration file
+tentaserve schema     # Print merged GraphQL SDL
+tentaserve tools      # List generated MCP tools
+tentaserve jwt        # JWT generation/validation utilities
+tentaserve version    # Print version info
+```
+
+Flags:
+```bash
+tentaserve serve --config custom.yaml --port 9090 --log-level debug
+tentaserve schema --upstream users-api --format json
+tentaserve tools --upstream users-api --format json
+```
+
+---
+
+## GraphQL Subscriptions via SSE
+
+Tentaserve bridges GraphQL subscriptions to Server-Sent Events:
+
+```graphql
+subscription { orderUpdated(orderId: "456") { status } }
+```
+
+Becomes:
+```bash
+curl -N http://localhost:8080/api/stream/order-updated?orderId=456 \
+  -H "Accept: text/event-stream"
+
+# Stream output:
+# event: message
+# data: {"status":"shipped"}
+#
+# event: message
+# data: {"status":"delivered"}
+```
+
+---
+
+## Admin Dashboard
+
+Enable the admin dashboard at `/-/admin`:
+
+```yaml
+admin:
+  enabled: true
+  path: "/-/admin"
+  auth:
+    type: "basic"
+    username: "admin"
+    password: "${ADMIN_PASSWORD}"
+```
+
+The dashboard shows: upstream health, request metrics, cache hit rate, and active MCP tools. Auto-refreshes every 5 seconds.
+
+---
+
+## Configuration Reference
+
+See [tentaserve.example.yaml](tentaserve.example.yaml) for a full annotated example.
+
+| Section | Key Options |
+|---------|-------------|
+| `server` | `host`, `port`, `read_timeout`, `write_timeout`, TLS config |
+| `gateway` | `rest_prefix`, `graphql_path`, `mcp_path` |
+| `gateway.rate_limit` | `enabled`, `requests_per_second`, `burst_size` |
+| `gateway.cache` | `enabled`, `max_size`, `ttl`, `max_entry_size` |
+| `gateway.circuit_breaker` | `enabled`, `failure_threshold`, `reset_timeout` |
+| `upstreams[]` | `name`, `type`, `base_url`/`endpoint`, `auth`, `timeout`, `retry` |
+| `schema.limits` | `max_depth`, `max_complexity`, `introspection` |
+| `mcp` | `enabled`, `tools.auto_discover`, `tools.prefix` |
+| `observability` | `logging.level`, `metrics.enabled`, `health.enabled` |
+
+Environment variable interpolation: `${VAR}` or `${VAR:default}`.
 
 ---
 
@@ -178,11 +290,43 @@ make build
 # Run tests
 make test
 
-# Build for all platforms
+# Run tests with race detector
+make test -race
+
+# Build for all platforms (Linux, macOS, Windows x AMD64/ARM64)
 make build-all
 
-# Build Docker image
+# Build Docker image (< 20MB)
 make docker
+
+# Generate test coverage
+make test-coverage
+```
+
+---
+
+## Deployment
+
+### Binary
+
+```bash
+# Download and run
+curl -L https://github.com/ersinkoc/tentaserve/releases/latest/download/tentaserve-linux-amd64 -o tentaserve
+chmod +x tentaserve
+./tentaserve serve --config tentaserve.yaml
+```
+
+### Docker
+
+```bash
+docker run -p 8080:8080 -v $(pwd)/tentaserve.yaml:/etc/tentaserve/config.yaml \
+  ghcr.io/ersinkoc/tentaserve:latest serve --config /etc/tentaserve/config.yaml
+```
+
+### Go Install
+
+```bash
+go install github.com/ersinkoc/tentaserve/cmd/tentaserve@latest
 ```
 
 ---

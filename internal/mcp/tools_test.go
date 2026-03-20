@@ -530,3 +530,277 @@ func TestToolStructure(t *testing.T) {
 		t.Errorf("Expected description 'A test tool', got %v", result["description"])
 	}
 }
+
+// --- Additional tests for coverage ---
+
+// TestTypeDefToJSONSchema tests typeDefToJSONSchema conversion.
+func TestTypeDefToJSONSchema(t *testing.T) {
+	t.Run("object type with fields", func(t *testing.T) {
+		typeDef := &schema.TypeDef{
+			Name: "UserInput",
+			Kind: schema.TypeKindInput,
+			Fields: []*schema.FieldDef{
+				{Name: "name", Type: schema.StringType()},
+				{Name: "age", Type: schema.IntType()},
+			},
+		}
+		schemaDef := schema.NewSchemaDefinition()
+		result := typeDefToJSONSchema(typeDef, schemaDef)
+		if result.Type != "object" {
+			t.Errorf("expected type object, got %s", result.Type)
+		}
+		if len(result.Properties) != 2 {
+			t.Errorf("expected 2 properties, got %d", len(result.Properties))
+		}
+		if result.Properties["name"] == nil {
+			t.Error("expected name property")
+		}
+		if result.Properties["age"] == nil {
+			t.Error("expected age property")
+		}
+	})
+
+	t.Run("object type kind", func(t *testing.T) {
+		typeDef := &schema.TypeDef{
+			Name: "User",
+			Kind: schema.TypeKindObject,
+			Fields: []*schema.FieldDef{
+				{Name: "id", Type: schema.IDType()},
+			},
+		}
+		schemaDef := schema.NewSchemaDefinition()
+		result := typeDefToJSONSchema(typeDef, schemaDef)
+		if result.Type != "object" {
+			t.Errorf("expected type object, got %s", result.Type)
+		}
+		if len(result.Properties) != 1 {
+			t.Errorf("expected 1 property, got %d", len(result.Properties))
+		}
+	})
+
+	t.Run("non-object type", func(t *testing.T) {
+		typeDef := &schema.TypeDef{
+			Name: "Status",
+			Kind: schema.TypeKindEnum,
+		}
+		schemaDef := schema.NewSchemaDefinition()
+		result := typeDefToJSONSchema(typeDef, schemaDef)
+		if result.Type != "object" {
+			t.Errorf("expected type object for non-object kind, got %s", result.Type)
+		}
+	})
+}
+
+// TestTypeRefToJSONSchema_NonNull tests NonNull wrapping.
+func TestTypeRefToJSONSchema_NonNull(t *testing.T) {
+	schemaDef := schema.NewSchemaDefinition()
+	nonNullStr := schema.NonNullType(schema.StringType())
+	result := typeRefToJSONSchema(nonNullStr, schemaDef)
+	if result.Type != "string" {
+		t.Errorf("expected type string (unwrapped from NonNull), got %s", result.Type)
+	}
+}
+
+// TestTypeRefToJSONSchema_Enum tests enum type conversion.
+func TestTypeRefToJSONSchema_Enum(t *testing.T) {
+	schemaDef := schema.NewSchemaDefinition()
+	enumType := schema.EnumType("Status", []string{"ACTIVE", "INACTIVE"})
+	result := typeRefToJSONSchema(enumType, schemaDef)
+	if result.Type != "string" {
+		t.Errorf("expected type string for enum, got %s", result.Type)
+	}
+	if len(result.Enum) != 2 {
+		t.Errorf("expected 2 enum values, got %d", len(result.Enum))
+	}
+}
+
+// TestTypeRefToJSONSchema_ObjectWithSchemaDef tests object type lookup.
+func TestTypeRefToJSONSchema_ObjectWithSchemaDef(t *testing.T) {
+	schemaDef := schema.NewSchemaDefinition()
+	userType := &schema.TypeDef{
+		Name: "User",
+		Kind: schema.TypeKindObject,
+		Fields: []*schema.FieldDef{
+			{Name: "id", Type: schema.IDType()},
+			{Name: "name", Type: schema.StringType()},
+		},
+	}
+	schemaDef.AddType(userType)
+
+	ref := schema.NamedType("User")
+	result := typeRefToJSONSchema(ref, schemaDef)
+	if result.Type != "object" {
+		t.Errorf("expected type object, got %s", result.Type)
+	}
+	if len(result.Properties) != 2 {
+		t.Errorf("expected 2 properties, got %d", len(result.Properties))
+	}
+}
+
+// TestTypeRefToJSONSchema_ObjectNotInSchema tests object type not found.
+func TestTypeRefToJSONSchema_ObjectNotInSchema(t *testing.T) {
+	schemaDef := schema.NewSchemaDefinition()
+	ref := schema.NamedType("NonExistent")
+	result := typeRefToJSONSchema(ref, schemaDef)
+	if result.Type != "object" {
+		t.Errorf("expected type object for missing type, got %s", result.Type)
+	}
+}
+
+// TestGenerateInputSchemaFromOpenAPI_WithRequestBody tests OpenAPI schema with request body.
+func TestGenerateInputSchemaFromOpenAPI_WithRequestBody(t *testing.T) {
+	params := []*openapi.Parameter{
+		{
+			Name:     "id",
+			In:       "path",
+			Required: true,
+			Schema:   &openapi.SchemaObject{Type: "string"},
+		},
+	}
+
+	reqBody := &openapi.RequestBody{
+		Required: true,
+		Content: map[string]*openapi.MediaType{
+			"application/json": {
+				Schema: &openapi.SchemaObject{
+					Type: "object",
+					Properties: map[string]*openapi.SchemaObject{
+						"name":  {Type: "string"},
+						"email": {Type: "string"},
+					},
+				},
+			},
+		},
+	}
+
+	data, err := GenerateInputSchemaFromOpenAPI(params, reqBody)
+	if err != nil {
+		t.Fatalf("Failed to generate schema: %v", err)
+	}
+
+	var s JSONSchema
+	if err := json.Unmarshal(data, &s); err != nil {
+		t.Fatalf("Failed to parse schema: %v", err)
+	}
+
+	// Should have id + name + email = 3 properties
+	if len(s.Properties) != 3 {
+		t.Errorf("Expected 3 properties, got %d", len(s.Properties))
+	}
+
+	// id should be required (from path param) and name/email from body required
+	if len(s.Required) < 1 {
+		t.Errorf("Expected at least 1 required field, got %d", len(s.Required))
+	}
+}
+
+// TestGenerateInputSchemaFromOpenAPI_EmptyParams tests with no params.
+func TestGenerateInputSchemaFromOpenAPI_EmptyParams(t *testing.T) {
+	data, err := GenerateInputSchemaFromOpenAPI(nil, nil)
+	if err != nil {
+		t.Fatalf("Failed to generate schema: %v", err)
+	}
+
+	var s JSONSchema
+	if err := json.Unmarshal(data, &s); err != nil {
+		t.Fatalf("Failed to parse schema: %v", err)
+	}
+
+	if s.Type != "object" {
+		t.Errorf("Expected type object, got %s", s.Type)
+	}
+}
+
+// TestGenerateInputSchemaFromOpenAPI_NilParam tests nil parameter in list.
+func TestGenerateInputSchemaFromOpenAPI_NilParam(t *testing.T) {
+	params := []*openapi.Parameter{nil, {
+		Name:   "limit",
+		Schema: &openapi.SchemaObject{Type: "integer"},
+	}}
+
+	data, err := GenerateInputSchemaFromOpenAPI(params, nil)
+	if err != nil {
+		t.Fatalf("Failed to generate schema: %v", err)
+	}
+
+	var s JSONSchema
+	if err := json.Unmarshal(data, &s); err != nil {
+		t.Fatalf("Failed to parse schema: %v", err)
+	}
+
+	if len(s.Properties) != 1 {
+		t.Errorf("Expected 1 property (nil param skipped), got %d", len(s.Properties))
+	}
+}
+
+// TestBuildFromSchema_NilSchema tests BuildFromSchema with nil.
+func TestBuildFromSchema_NilSchema(t *testing.T) {
+	r := NewToolRegistry(nil)
+	err := r.BuildFromSchema(nil, "test")
+	if err == nil {
+		t.Error("Expected error for nil schema")
+	}
+}
+
+// TestBuildFromOpenAPI_NilSpec tests BuildFromOpenAPI with nil.
+func TestBuildFromOpenAPI_NilSpec(t *testing.T) {
+	r := NewToolRegistry(nil)
+	err := r.BuildFromOpenAPI(nil, "test")
+	if err == nil {
+		t.Error("Expected error for nil spec")
+	}
+}
+
+// TestGenerateInputSchema_WithDefaultValue tests schema with default values.
+func TestGenerateInputSchema_WithDefaultValue(t *testing.T) {
+	args := []*schema.ArgumentDef{
+		{
+			Name:         "limit",
+			Description:  "Number of items",
+			Type:         schema.IntType(),
+			Required:     false,
+			DefaultValue: 20,
+		},
+	}
+
+	schemaDef := schema.NewSchemaDefinition()
+	data, err := GenerateInputSchema(args, schemaDef)
+	if err != nil {
+		t.Fatalf("Failed to generate schema: %v", err)
+	}
+
+	var s JSONSchema
+	if err := json.Unmarshal(data, &s); err != nil {
+		t.Fatalf("Failed to parse schema: %v", err)
+	}
+
+	prop := s.Properties["limit"]
+	if prop == nil {
+		t.Fatal("Expected limit property")
+	}
+	if prop.Default == nil {
+		t.Error("Expected default value to be set")
+	}
+}
+
+// TestOpenAPISchemaToJSONSchema_Default tests handling default values.
+func TestOpenAPISchemaToJSONSchema_Default(t *testing.T) {
+	s := &openapi.SchemaObject{
+		Type:    "integer",
+		Default: 42,
+	}
+
+	result := openAPISchemaToJSONSchema(s)
+	if result.Default != 42 {
+		t.Errorf("Expected default 42, got %v", result.Default)
+	}
+}
+
+// TestOpenAPISchemaToJSONSchema_UnknownType tests unknown type handling.
+func TestOpenAPISchemaToJSONSchema_UnknownType(t *testing.T) {
+	s := &openapi.SchemaObject{Type: "custom"}
+	result := openAPISchemaToJSONSchema(s)
+	if result.Type != "object" {
+		t.Errorf("Expected type object for unknown, got %s", result.Type)
+	}
+}

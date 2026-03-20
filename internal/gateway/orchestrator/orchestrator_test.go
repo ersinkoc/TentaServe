@@ -361,3 +361,344 @@ func TestStopWithoutStart(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 }
+
+// --- Additional orchestrator tests for coverage ---
+
+func TestServeHTTP_ProxyToUpstream(t *testing.T) {
+	// Create a test upstream server
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Upstream", "true")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer upstream.Close()
+
+	o := New(nil)
+	config := &Config{
+		Upstreams: []Upstream{
+			{
+				Name:       "test-api",
+				Target:     upstream.URL,
+				PathPrefix: "/api",
+			},
+		},
+	}
+	if err := o.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/test", nil)
+	rec := httptest.NewRecorder()
+
+	o.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", rec.Code)
+	}
+	if rec.Header().Get("X-Upstream") != "true" {
+		t.Error("Expected X-Upstream header from upstream")
+	}
+	if rec.Body.String() != `{"status":"ok"}` {
+		t.Errorf("Expected body, got %s", rec.Body.String())
+	}
+}
+
+func TestServeHTTP_ProxyWithCustomHeaders(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Custom") != "custom-value" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing custom header"))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	o := New(nil)
+	config := &Config{
+		Upstreams: []Upstream{
+			{
+				Name:       "test-api",
+				Target:     upstream.URL,
+				PathPrefix: "/api",
+				Headers: map[string]string{
+					"X-Custom": "custom-value",
+				},
+			},
+		},
+	}
+	if err := o.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/test", nil)
+	rec := httptest.NewRecorder()
+
+	o.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d. Body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestServeHTTP_ProxyWithQueryString(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.RawQuery != "foo=bar" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("missing query string"))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	o := New(nil)
+	config := &Config{
+		Upstreams: []Upstream{
+			{
+				Name:       "test-api",
+				Target:     upstream.URL,
+				PathPrefix: "/api",
+			},
+		},
+	}
+	if err := o.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/test?foo=bar", nil)
+	rec := httptest.NewRecorder()
+
+	o.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d. Body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestServeHTTP_UpstreamDown(t *testing.T) {
+	o := New(nil)
+	config := &Config{
+		Upstreams: []Upstream{
+			{
+				Name:       "dead-api",
+				Target:     "http://127.0.0.1:1", // port 1 should refuse
+				PathPrefix: "/api",
+			},
+		},
+	}
+	if err := o.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/test", nil)
+	rec := httptest.NewRecorder()
+
+	o.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Errorf("Expected 502 Bad Gateway, got %d", rec.Code)
+	}
+}
+
+func TestLoadConfig_MultipleUpstreams(t *testing.T) {
+	o := New(nil)
+	config := &Config{
+		Upstreams: []Upstream{
+			{Name: "api1", Target: "http://localhost:8081", PathPrefix: "/api1"},
+			{Name: "api2", Target: "http://localhost:8082", PathPrefix: "/api2"},
+			{Name: "api3", Target: "http://localhost:8083", PathPrefix: "/api3"},
+		},
+	}
+	if err := o.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+	if len(o.handlers) != 3 {
+		t.Errorf("Expected 3 handlers, got %d", len(o.handlers))
+	}
+}
+
+func TestLoadConfig_WithBreaker(t *testing.T) {
+	o := New(nil)
+	config := &Config{
+		Upstreams: []Upstream{
+			{
+				Name:       "api",
+				Target:     "http://localhost:8081",
+				PathPrefix: "/api",
+				Breaker: &BreakerConfig{
+					Enabled:          true,
+					FailureThreshold: 5,
+					SuccessThreshold: 3,
+					TimeoutSeconds:   30,
+				},
+			},
+		},
+	}
+	if err := o.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+	if len(o.breakers) != 1 {
+		t.Errorf("Expected 1 breaker, got %d", len(o.breakers))
+	}
+}
+
+func TestLoadConfig_WithCacheAndBreaker(t *testing.T) {
+	o := New(nil)
+	config := &Config{
+		Upstreams: []Upstream{
+			{
+				Name:       "api",
+				Target:     "http://localhost:8081",
+				PathPrefix: "/api",
+				Cache: &CacheConfig{
+					Enabled: true,
+					TTL:     60,
+				},
+				Breaker: &BreakerConfig{
+					Enabled:          true,
+					FailureThreshold: 5,
+					SuccessThreshold: 3,
+					TimeoutSeconds:   30,
+				},
+			},
+		},
+	}
+	if err := o.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+	if len(o.caches) != 1 {
+		t.Errorf("Expected 1 cache, got %d", len(o.caches))
+	}
+	if len(o.breakers) != 1 {
+		t.Errorf("Expected 1 breaker, got %d", len(o.breakers))
+	}
+}
+
+func TestLoadConfig_WithAuthPlugin(t *testing.T) {
+	o := New(nil)
+	config := &Config{
+		Upstreams: []Upstream{
+			{
+				Name:       "api",
+				Target:     "http://localhost:8081",
+				PathPrefix: "/api",
+				AuthPlugin: "passthrough",
+			},
+		},
+	}
+	if err := o.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+	if len(o.handlers) != 1 {
+		t.Errorf("Expected 1 handler, got %d", len(o.handlers))
+	}
+}
+
+func TestLoadConfig_ReloadConfig(t *testing.T) {
+	o := New(nil)
+
+	config1 := &Config{
+		Upstreams: []Upstream{
+			{Name: "api1", Target: "http://localhost:8081", PathPrefix: "/api1"},
+		},
+	}
+	if err := o.LoadConfig(config1); err != nil {
+		t.Fatal(err)
+	}
+	if len(o.handlers) != 1 {
+		t.Errorf("Expected 1 handler after first load, got %d", len(o.handlers))
+	}
+
+	config2 := &Config{
+		Upstreams: []Upstream{
+			{Name: "api2", Target: "http://localhost:8082", PathPrefix: "/api2"},
+			{Name: "api3", Target: "http://localhost:8083", PathPrefix: "/api3"},
+		},
+	}
+	if err := o.LoadConfig(config2); err != nil {
+		t.Fatal(err)
+	}
+	if len(o.handlers) != 2 {
+		t.Errorf("Expected 2 handlers after reload, got %d", len(o.handlers))
+	}
+}
+
+func TestGetUpstream_Multiple(t *testing.T) {
+	o := New(nil)
+	config := &Config{
+		Upstreams: []Upstream{
+			{Name: "api1", Target: "http://localhost:8081", PathPrefix: "/api1"},
+			{Name: "api2", Target: "http://localhost:8082", PathPrefix: "/api2"},
+		},
+	}
+	if err := o.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name    string
+		wantErr bool
+	}{
+		{"api1", false},
+		{"api2", false},
+		{"api3", true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := o.GetUpstream(tc.name)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("GetUpstream(%q) error = %v, wantErr %v", tc.name, err, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestStats_NoCacheOrBreaker(t *testing.T) {
+	o := New(nil)
+	config := &Config{
+		Upstreams: []Upstream{
+			{Name: "api", Target: "http://localhost:8081", PathPrefix: "/api"},
+		},
+	}
+	if err := o.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+
+	stats := o.Stats()
+	if stats["upstreams"] != 1 {
+		t.Errorf("Expected 1 upstream, got %v", stats["upstreams"])
+	}
+	if stats["caches"] != nil {
+		t.Error("Expected no cache stats for upstream without cache")
+	}
+	if stats["breakers"] != nil {
+		t.Error("Expected no breaker stats for upstream without breaker")
+	}
+}
+
+func TestFindHandler_EmptyHandlers(t *testing.T) {
+	o := New(nil)
+	config := &Config{Upstreams: []Upstream{}}
+	if err := o.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+
+	handler, prefix := o.findHandler("/anything")
+	if handler != nil {
+		t.Error("Expected nil handler for empty handlers")
+	}
+	if prefix != "" {
+		t.Errorf("Expected empty prefix, got %s", prefix)
+	}
+}
+
+func TestUpstreamFromContext_TypeMismatch(t *testing.T) {
+	// Put a non-string value in context with the same key
+	ctx := context.WithValue(context.Background(), upstreamNameKey{}, 42)
+	name := UpstreamFromContext(ctx)
+	if name != "" {
+		t.Errorf("Expected empty string for non-string context value, got %s", name)
+	}
+}

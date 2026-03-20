@@ -165,6 +165,91 @@ func TestBuildGraphQLUpstreamSchema(t *testing.T) {
 	}
 }
 
+// TestBuildSchemaFromConfig_NoUpstreams tests building schema with no upstreams.
+func TestBuildSchemaFromConfig_NoUpstreams(t *testing.T) {
+	cfg := &config.Config{
+		Upstreams: []config.UpstreamConfig{},
+	}
+
+	s, err := buildSchemaFromConfig(cfg, "", nil)
+	if err != nil {
+		t.Fatalf("Failed to build schema: %v", err)
+	}
+
+	if s == nil {
+		t.Fatal("Expected non-nil schema")
+	}
+
+	// Should still have a Query type set
+	if s.Query == nil {
+		t.Error("Expected Query operation to be set even with no upstreams")
+	}
+}
+
+// TestBuildSchemaFromConfig_GraphQLUpstream tests building schema with a GraphQL upstream.
+func TestBuildSchemaFromConfig_GraphQLUpstream(t *testing.T) {
+	cfg := &config.Config{
+		Upstreams: []config.UpstreamConfig{
+			{
+				Name:     "gql-api",
+				Type:     "graphql",
+				Endpoint: "http://localhost:4000/graphql",
+			},
+		},
+	}
+
+	s, err := buildSchemaFromConfig(cfg, "", nil)
+	if err != nil {
+		t.Fatalf("Failed to build schema: %v", err)
+	}
+
+	if _, ok := s.GetType("gql-apiQuery"); !ok {
+		t.Error("Expected gql-apiQuery type to be added")
+	}
+}
+
+// TestBuildRESTUpstreamSchema_CreatesQueryField tests that REST schema creates Query field.
+func TestBuildRESTUpstreamSchema_CreatesQueryField(t *testing.T) {
+	s := buildEmptySchema()
+	upstream := config.UpstreamConfig{
+		Name:    "my-api",
+		Type:    "rest",
+		BaseURL: "http://localhost:9090",
+	}
+
+	err := buildRESTUpstreamSchema(s, upstream, nil)
+	if err != nil {
+		t.Fatalf("Failed to build REST schema: %v", err)
+	}
+
+	// Verify the upstream type was created
+	upType, ok := s.GetType("my-apiQuery")
+	if !ok {
+		t.Fatal("Expected my-apiQuery type to be added")
+	}
+	if len(upType.Fields) == 0 {
+		t.Error("Expected at least one field on upstream type")
+	}
+}
+
+// TestSchemaToJSON_NoQuery tests JSON output when there's no query.
+func TestSchemaToJSON_NoQuery(t *testing.T) {
+	s := buildEmptySchema()
+
+	jsonStr, err := schemaToJSON(s)
+	if err != nil {
+		t.Fatalf("Failed to convert to JSON: %v", err)
+	}
+
+	if !strings.Contains(jsonStr, "openapi") {
+		t.Error("Expected JSON to contain 'openapi'")
+	}
+	// paths should be empty
+	if !strings.Contains(jsonStr, `"paths"`) {
+		t.Error("Expected JSON to contain 'paths'")
+	}
+}
+
 // Helper function
 func buildEmptySchema() *schema.SchemaDefinition {
 	sd := schema.NewSchemaDefinition()

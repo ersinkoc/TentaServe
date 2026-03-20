@@ -460,3 +460,161 @@ func TestTypeKindChecks(t *testing.T) {
 		})
 	}
 }
+
+// --- Coverage boost tests for introspection ---
+
+func TestIntrospect_InvalidURL(t *testing.T) {
+	client := NewIntrospectionClient(IntrospectionClientOptions{
+		URL: "http://localhost:1/nonexistent",
+	})
+
+	_, err := client.Introspect(context.Background())
+	if err == nil {
+		t.Error("Expected error for unreachable URL")
+	}
+}
+
+func TestIntrospect_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{invalid json}`))
+	}))
+	defer server.Close()
+
+	client := NewIntrospectionClient(IntrospectionClientOptions{
+		URL: server.URL,
+	})
+
+	_, err := client.Introspect(context.Background())
+	if err == nil {
+		t.Error("Expected error for invalid JSON response")
+	}
+}
+
+func TestIntrospect_NilDataInResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"data": null}`))
+	}))
+	defer server.Close()
+
+	client := NewIntrospectionClient(IntrospectionClientOptions{
+		URL: server.URL,
+	})
+
+	_, err := client.Introspect(context.Background())
+	if err == nil {
+		t.Error("Expected error for nil data in response")
+	}
+}
+
+func TestIntrospect_NilSchemaInData(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"data": {"__schema": null}}`))
+	}))
+	defer server.Close()
+
+	client := NewIntrospectionClient(IntrospectionClientOptions{
+		URL: server.URL,
+	})
+
+	_, err := client.Introspect(context.Background())
+	if err == nil {
+		t.Error("Expected error for nil schema in response data")
+	}
+}
+
+func TestIntrospect_WithCustomHeaders(t *testing.T) {
+	var receivedAuth string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedAuth = r.Header.Get("Authorization")
+		response := IntrospectionResponse{
+			Data: &SchemaData{
+				Schema: &Schema{
+					QueryType: &TypeRef{Name: "Query"},
+					Types:     []IntrospectionType{{Kind: "OBJECT", Name: "Query"}},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client := NewIntrospectionClient(IntrospectionClientOptions{
+		URL: server.URL,
+		Headers: map[string]string{
+			"Authorization": "Bearer test-token",
+		},
+	})
+
+	_, err := client.Introspect(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if receivedAuth != "Bearer test-token" {
+		t.Errorf("expected Authorization header 'Bearer test-token', got %q", receivedAuth)
+	}
+}
+
+func TestIntrospect_WithCustomHTTPClient(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response := IntrospectionResponse{
+			Data: &SchemaData{
+				Schema: &Schema{
+					QueryType: &TypeRef{Name: "Query"},
+					Types:     []IntrospectionType{{Kind: "OBJECT", Name: "Query"}},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	customClient := &http.Client{}
+	client := NewIntrospectionClient(IntrospectionClientOptions{
+		URL:    server.URL,
+		Client: customClient,
+	})
+
+	schema, err := client.Introspect(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if schema == nil {
+		t.Fatal("expected non-nil schema")
+	}
+}
+
+func TestTypeKindChecks_Negative(t *testing.T) {
+	// Each method should return false for kinds other than its own
+	typ := &IntrospectionType{Kind: "SCALAR"}
+	if typ.IsObject() {
+		t.Error("scalar should not be object")
+	}
+	if typ.IsEnum() {
+		t.Error("scalar should not be enum")
+	}
+	if typ.IsInputObject() {
+		t.Error("scalar should not be input object")
+	}
+	if typ.IsInterface() {
+		t.Error("scalar should not be interface")
+	}
+	if typ.IsUnion() {
+		t.Error("scalar should not be union")
+	}
+}
+
+func TestSchema_GetType_EmptySchema(t *testing.T) {
+	s := &Schema{Types: []IntrospectionType{}}
+	result := s.GetType("Missing")
+	if result != nil {
+		t.Errorf("expected nil for empty schema, got %v", result)
+	}
+}

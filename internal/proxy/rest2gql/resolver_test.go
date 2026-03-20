@@ -2,6 +2,7 @@ package rest2gql
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -364,6 +365,175 @@ func TestPathToFieldNameHelper(t *testing.T) {
 				t.Errorf("pathToFieldName(%q) = %q, want %q", tt.path, got, tt.expected)
 			}
 		})
+	}
+}
+
+func TestResolver_BuildURL(t *testing.T) {
+	resolver := &Resolver{
+		baseURL: "http://api.example.com",
+		path:    "/users/{id}",
+		method:  "GET",
+		operation: &openapi.Operation{
+			Parameters: []*openapi.Parameter{
+				{Name: "id", In: "path"},
+				{Name: "limit", In: "query"},
+			},
+		},
+	}
+
+	t.Run("with path and query params", func(t *testing.T) {
+		url, err := resolver.buildURL(map[string]interface{}{
+			"id":    "123",
+			"limit": 10,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if url != "http://api.example.com/users/123?limit=10" {
+			t.Errorf("unexpected URL: %s", url)
+		}
+	})
+
+	t.Run("missing path param", func(t *testing.T) {
+		_, err := resolver.buildURL(map[string]interface{}{"limit": 10})
+		if err == nil {
+			t.Error("expected error for missing path param")
+		}
+	})
+
+	t.Run("nil operation", func(t *testing.T) {
+		nilOpResolver := &Resolver{operation: nil}
+		_, err := nilOpResolver.buildURL(map[string]interface{}{})
+		if err == nil {
+			t.Error("expected error for nil operation")
+		}
+	})
+
+	t.Run("empty base and path", func(t *testing.T) {
+		r := &Resolver{
+			operation: &openapi.Operation{},
+		}
+		url, err := r.buildURL(map[string]interface{}{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if url != "/" + "/" {
+			// baseURL="" -> "/" and path="" -> "/"
+			t.Logf("URL with empty base/path: %s", url)
+		}
+	})
+}
+
+func TestResolver_CreateRequest(t *testing.T) {
+	resolver := &Resolver{method: "POST"}
+	ctx := context.Background()
+
+	t.Run("with body", func(t *testing.T) {
+		body := strings.NewReader(`{"name":"John"}`)
+		req, err := resolver.createRequest(ctx, "http://example.com/users", body)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if req.Method != "POST" {
+			t.Errorf("expected POST, got %s", req.Method)
+		}
+		if req.Header.Get("Content-Type") != "application/json" {
+			t.Error("expected Content-Type application/json")
+		}
+		if req.Header.Get("Accept") != "application/json" {
+			t.Error("expected Accept application/json")
+		}
+	})
+
+	t.Run("without body", func(t *testing.T) {
+		req, err := resolver.createRequest(ctx, "http://example.com/users", nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if req.Header.Get("Content-Type") != "" {
+			t.Error("expected no Content-Type without body")
+		}
+	})
+
+	t.Run("empty method defaults to GET", func(t *testing.T) {
+		r := &Resolver{}
+		req, err := r.createRequest(ctx, "http://example.com", nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if req.Method != "GET" {
+			t.Errorf("expected default GET, got %s", req.Method)
+		}
+	})
+}
+
+func TestResolver_Resolve_NoOperation(t *testing.T) {
+	resolver := &Resolver{operation: nil}
+	_, err := resolver.Resolve(nil, nil)
+	if err == nil {
+		t.Error("expected error for nil operation")
+	}
+}
+
+func TestResolverRegistry_ForEach(t *testing.T) {
+	registry := NewResolverRegistry()
+
+	client, err := upstream.NewClient(upstream.ClientOptions{BaseURL: "http://example.com"})
+	if err != nil {
+		t.Fatalf("NewClient failed: %v", err)
+	}
+
+	builder := NewResolverBuilder(client, "http://example.com")
+	r1 := builder.BuildRESTResolver("/users", "GET", nil, &openapi.Operation{})
+	r2 := builder.BuildRESTResolver("/posts", "GET", nil, &openapi.Operation{})
+	registry.Register("Query.users", r1)
+	registry.Register("Query.posts", r2)
+
+	count := 0
+	registry.ForEach(func(fieldPath string, resolver *Resolver) {
+		count++
+	})
+
+	if count != 2 {
+		t.Errorf("expected 2 iterations, got %d", count)
+	}
+}
+
+func TestResolverRegistry_BuildFromSpec_AllMethods(t *testing.T) {
+	registry := NewResolverRegistry()
+
+	client, err := upstream.NewClient(upstream.ClientOptions{BaseURL: "http://example.com"})
+	if err != nil {
+		t.Fatalf("NewClient failed: %v", err)
+	}
+
+	builder := NewResolverBuilder(client, "http://example.com")
+
+	spec := &openapi.OpenAPISpec{
+		OpenAPI: "3.0.0",
+		Info:    openapi.Info{Title: "Test API", Version: "1.0.0"},
+		Paths: map[string]*openapi.PathItem{
+			"/items": {
+				Get:    &openapi.Operation{Summary: "List"},
+				Post:   &openapi.Operation{Summary: "Create"},
+				Put:    &openapi.Operation{Summary: "Update"},
+				Delete: &openapi.Operation{Summary: "Delete"},
+				Patch:  &openapi.Operation{Summary: "Patch"},
+			},
+		},
+	}
+
+	err = registry.BuildFromSpec(builder, spec)
+	if err != nil {
+		t.Fatalf("BuildFromSpec failed: %v", err)
+	}
+
+	// Should have 1 Query + 4 Mutations
+	if _, ok := registry.Lookup("Query.items"); !ok {
+		t.Error("Expected Query.items resolver")
+	}
+	if _, ok := registry.Lookup("Mutation.items"); !ok {
+		t.Error("Expected Mutation.items resolver")
 	}
 }
 

@@ -266,12 +266,17 @@ func TestMiddlewareConcurrent(t *testing.T) {
 	}
 	wg.Wait()
 
-	// Should allow exactly burst (100) requests
-	if successCount != 100 {
-		t.Errorf("Expected 100 successful requests, got %d", successCount)
+	// Should allow approximately burst (100) requests.
+	// Allow small tolerance because tokens may refill during concurrent execution.
+	total := successCount + limitedCount
+	if total != 200 {
+		t.Errorf("Expected 200 total requests, got %d", total)
 	}
-	if limitedCount != 100 {
-		t.Errorf("Expected 100 rate limited requests, got %d", limitedCount)
+	if successCount < 100 || successCount > 110 {
+		t.Errorf("Expected ~100 successful requests (tolerance 100-110), got %d", successCount)
+	}
+	if limitedCount < 90 || limitedCount > 100 {
+		t.Errorf("Expected ~100 rate limited requests (tolerance 90-100), got %d", limitedCount)
 	}
 }
 

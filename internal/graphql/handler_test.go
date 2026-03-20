@@ -268,3 +268,85 @@ func TestHandlerResolverError(t *testing.T) {
 		t.Error("expected errors in response")
 	}
 }
+
+// --- Additional handler tests for coverage ---
+
+func TestHandler_Executor(t *testing.T) {
+	handler := NewHandler(HandlerConfig{})
+	exec := handler.Executor()
+	if exec == nil {
+		t.Error("Expected non-nil executor")
+	}
+}
+
+func TestHandler_SetValidator(t *testing.T) {
+	handler := NewHandler(HandlerConfig{})
+	v := NewValidator(5, 500)
+	handler.SetValidator(v)
+
+	// Verify the new validator is active by sending a deep query
+	body := `{"query": "{ a { b { c { d { e { f } } } } } }"}`
+	req := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	var result ExecutionResult
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	if len(result.Errors) == 0 {
+		t.Error("Expected depth validation error with maxDepth=5")
+	}
+}
+
+func TestHandler_WithCustomConfig(t *testing.T) {
+	handler := NewHandler(HandlerConfig{
+		MaxDepth:      20,
+		MaxComplexity: 5000,
+	})
+	if handler == nil {
+		t.Fatal("Expected non-nil handler")
+	}
+}
+
+func TestHandler_ContentTypeJSON(t *testing.T) {
+	handler := NewHandler(HandlerConfig{})
+	handler.RegisterResolver("Query", "ping", func(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
+		return "pong", nil
+	})
+
+	body := `{"query": "{ ping }"}`
+	req := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
+		t.Errorf("Expected Content-Type 'application/json', got %s", ct)
+	}
+}
+
+func TestHandler_ErrorOnlyResponse(t *testing.T) {
+	handler := NewHandler(HandlerConfig{})
+	// No resolvers registered, query will use default resolver which errors
+
+	body := `{"query": "{ nonexistent }"}`
+	req := httptest.NewRequest(http.MethodPost, "/graphql", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	if result["errors"] == nil {
+		t.Error("Expected errors in response")
+	}
+}

@@ -446,6 +446,96 @@ func TestBuildConnection_WithAfter(t *testing.T) {
 	}
 }
 
+// TestPaginationTranslator_FromGraphQLArgs_OffsetFloat tests float offset args.
+func TestPaginationTranslator_FromGraphQLArgs_OffsetFloat(t *testing.T) {
+	pt := NewPaginationTranslator(PaginationTranslatorOptions{DefaultLimit: 20})
+
+	// Float offset and page values (JSON numbers decode as float64)
+	params := pt.FromGraphQLArgs(map[string]interface{}{
+		"offset": float64(30),
+		"limit":  float64(15),
+		"page":   float64(3),
+	})
+
+	if params.Offset != 30 {
+		t.Errorf("Expected offset 30, got %d", params.Offset)
+	}
+	if params.Limit != 15 {
+		t.Errorf("Expected limit 15, got %d", params.Limit)
+	}
+	if params.Page == nil || *params.Page != 3 {
+		t.Errorf("Expected page 3, got %v", params.Page)
+	}
+}
+
+// TestPaginationTranslator_ToRESTParams_CursorBefore tests before cursor.
+func TestPaginationTranslator_ToRESTParams_CursorBefore(t *testing.T) {
+	pt := NewPaginationTranslator(PaginationTranslatorOptions{})
+
+	params := &PaginationParams{
+		Style:  CursorPagination,
+		Before: "xyz789",
+		Limit:  10,
+	}
+
+	restParams := pt.ToRESTParams(params, CursorPagination)
+	if restParams["cursor"] != "xyz789" {
+		t.Errorf("Expected cursor 'xyz789', got %s", restParams["cursor"])
+	}
+}
+
+// TestPaginationTranslator_Relay_LastBefore tests last/before relay args.
+func TestPaginationTranslator_Relay_LastBefore(t *testing.T) {
+	pt := NewPaginationTranslator(PaginationTranslatorOptions{DefaultLimit: 20})
+
+	params := pt.FromGraphQLArgs(map[string]interface{}{
+		"last":   10,
+		"before": "cursor123",
+	})
+
+	if params.Style != RelayPagination {
+		t.Errorf("Expected relay style, got %s", params.Style)
+	}
+	if params.Last == nil || *params.Last != 10 {
+		t.Errorf("Expected last 10, got %v", params.Last)
+	}
+	if params.Before != "cursor123" {
+		t.Errorf("Expected before 'cursor123', got %s", params.Before)
+	}
+}
+
+// TestPaginationTranslator_ToRESTParams_RelayBefore tests relay with before param.
+func TestPaginationTranslator_ToRESTParams_RelayBefore(t *testing.T) {
+	pt := NewPaginationTranslator(PaginationTranslatorOptions{})
+
+	params := &PaginationParams{
+		Style:  RelayPagination,
+		Before: "xyz789",
+		Limit:  5,
+	}
+
+	restParams := pt.ToRESTParams(params, RelayPagination)
+	if restParams["before"] != "xyz789" {
+		t.Errorf("Expected before 'xyz789', got %s", restParams["before"])
+	}
+}
+
+// TestPaginationTranslator_ToRESTParams_OffsetNoPage tests offset without page.
+func TestPaginationTranslator_ToRESTParams_OffsetNoPage(t *testing.T) {
+	pt := NewPaginationTranslator(PaginationTranslatorOptions{})
+
+	params := &PaginationParams{
+		Style:  OffsetPagination,
+		Offset: 0,
+		Limit:  20,
+	}
+
+	restParams := pt.ToRESTParams(params, OffsetPagination)
+	if _, ok := restParams["page"]; ok {
+		t.Error("Expected no page param when Page is nil")
+	}
+}
+
 // TestBuildConnection_Empty tests empty connection.
 func TestBuildConnection_Empty(t *testing.T) {
 	pt := NewPaginationTranslator(PaginationTranslatorOptions{})

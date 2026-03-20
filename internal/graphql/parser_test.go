@@ -552,3 +552,93 @@ func BenchmarkParse(b *testing.B) {
 		_, _ = Parse(input)
 	}
 }
+
+// --- Coverage boost tests for parser ---
+
+func TestParseValue_AllTypes(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"int", "42"},
+		{"float", "3.14"},
+		{"string", `"hello"`},
+		{"bool true", "true"},
+		{"bool false", "false"},
+		{"null", "null"},
+		{"enum", "ACTIVE"},
+		{"list", "[1, 2, 3]"},
+		{"object", `{key: "value"}`},
+		{"variable", "$myVar"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val, err := ParseValue(tt.input)
+			if err != nil {
+				t.Fatalf("ParseValue(%q) error: %v", tt.input, err)
+			}
+			if val == nil {
+				t.Fatalf("ParseValue(%q) returned nil", tt.input)
+			}
+		})
+	}
+}
+
+func TestParser_Errors_Method(t *testing.T) {
+	p := NewParserString(`{ valid }`)
+	_, _ = p.Parse()
+	errs := p.Errors()
+	if len(errs) != 0 {
+		t.Errorf("expected no errors, got %v", errs)
+	}
+
+	p2 := NewParserString(`{ . }`)
+	_, _ = p2.Parse()
+	errs2 := p2.Errors()
+	if len(errs2) == 0 {
+		t.Error("expected parse errors for invalid input")
+	}
+}
+
+func TestParser_Peek(t *testing.T) {
+	// Peek is used internally in parsing, verify it via behavior
+	// Variable definition uses peek when checking default values
+	input := `query Q($x: Int = 5) { field }`
+	doc, err := Parse(input)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	op := doc.Definitions[0].(*OperationDefinition)
+	if len(op.VariableDefinitions) != 1 {
+		t.Fatalf("expected 1 var def, got %d", len(op.VariableDefinitions))
+	}
+	if op.VariableDefinitions[0].DefaultValue == nil {
+		t.Error("expected default value for variable")
+	}
+}
+
+func TestParseType_Standalone(t *testing.T) {
+	tests := []struct {
+		input string
+	}{
+		{"String"},
+		{"Int"},
+		{"[String]"},
+		{"[Int!]!"},
+		{"[[String]]"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			typ, err := ParseType(tt.input)
+			if err != nil {
+				t.Fatalf("ParseType(%q) error: %v", tt.input, err)
+			}
+			if typ == nil {
+				t.Fatalf("ParseType(%q) returned nil", tt.input)
+			}
+		})
+	}
+}

@@ -88,3 +88,61 @@ func TestBuildToolsFromUpstreamUnknownType(t *testing.T) {
 		t.Errorf("buildToolsFromUpstream failed: %v", err)
 	}
 }
+
+// TestBuildToolsFromUpstreamGraphQL tests building tools from a GraphQL upstream.
+func TestBuildToolsFromUpstreamGraphQL(t *testing.T) {
+	registry := mcp.NewToolRegistry(nil)
+
+	upstream := config.UpstreamConfig{
+		Name:     "graphql-api",
+		Type:     "graphql",
+		Endpoint: "http://localhost:4000/graphql",
+	}
+
+	err := buildToolsFromUpstream(registry, upstream)
+	if err != nil {
+		t.Fatalf("buildToolsFromUpstream failed: %v", err)
+	}
+
+	tools := registry.List()
+	if len(tools) == 0 {
+		t.Error("expected at least one tool from GraphQL upstream")
+	}
+}
+
+// TestBuildToolsFromUpstreamREST_NoOpenAPI tests building tools from REST upstream without OpenAPI spec.
+func TestBuildToolsFromUpstreamREST_NoOpenAPI(t *testing.T) {
+	registry := mcp.NewToolRegistry(nil)
+
+	upstream := config.UpstreamConfig{
+		Name:    "rest-api",
+		Type:    "rest",
+		BaseURL: "http://localhost:8080",
+		// No OpenAPI config
+	}
+
+	err := buildToolsFromUpstream(registry, upstream)
+	if err != nil {
+		t.Fatalf("buildToolsFromUpstream failed: %v", err)
+	}
+
+	// Without OpenAPI, no tools should be generated
+	tools := registry.List()
+	if len(tools) != 0 {
+		t.Errorf("expected 0 tools without OpenAPI spec, got %d", len(tools))
+	}
+}
+
+// TestPrintToolsTable_LongDescription tests truncation of long descriptions.
+func TestPrintToolsTable_LongDescription(t *testing.T) {
+	tools := []*mcp.Tool{
+		{
+			Name:        "long_desc_tool",
+			Description: "This is a very long description that exceeds fifty characters and should be truncated",
+			Upstream:    "test",
+			Operation:   "GET /test",
+		},
+	}
+	// Should not panic
+	printToolsTable(tools)
+}

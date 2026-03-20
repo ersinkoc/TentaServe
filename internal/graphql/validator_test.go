@@ -323,6 +323,194 @@ func TestValidateResult_HasErrors(t *testing.T) {
 	}
 }
 
+// --- Additional validator tests for coverage ---
+
+func TestValidator_ComplexityWithArguments(t *testing.T) {
+	query := `{ user(id: 1, name: "test", active: true) { id name } }`
+	doc, err := Parse(query)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	complexity := CalculateComplexity(doc)
+	if complexity < 5 {
+		t.Errorf("Expected complexity >= 5 for query with arguments, got %d", complexity)
+	}
+}
+
+func TestValidator_ValidateComplexityQuick_Fail(t *testing.T) {
+	query := `{ a { b { c { d { e { f { g { h } } } } } } } }`
+	doc, err := Parse(query)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	err = ValidateComplexityQuick(doc, 1)
+	if err == nil {
+		t.Error("Expected error for exceeding complexity limit")
+	}
+	if !strings.Contains(err.Error(), "complexity") {
+		t.Errorf("Expected 'complexity' in error message, got: %v", err)
+	}
+}
+
+func TestValidator_AnalyzeFragmentSpread(t *testing.T) {
+	query := `
+		query {
+			user {
+				...UserFields
+			}
+		}
+		fragment UserFields on User {
+			id
+			name
+		}
+	`
+	doc, err := Parse(query)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	v := DefaultValidator()
+	result := v.Validate(doc)
+	if result.HasErrors() {
+		t.Errorf("Expected no errors, got %v", result.Errors)
+	}
+	if result.Depth < 1 {
+		t.Errorf("Expected depth >= 1, got %d", result.Depth)
+	}
+}
+
+func TestValidator_AnalyzeInlineFragment(t *testing.T) {
+	query := `{ user { ... on User { id name posts { title } } } }`
+	doc, err := Parse(query)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	v := DefaultValidator()
+	result := v.Validate(doc)
+	if result.HasErrors() {
+		t.Errorf("Expected no errors, got %v", result.Errors)
+	}
+	if result.Depth < 3 {
+		t.Errorf("Expected depth >= 3, got %d", result.Depth)
+	}
+}
+
+func TestValidator_EmptyInlineFragment(t *testing.T) {
+	doc := &Document{
+		Definitions: []Definition{
+			&OperationDefinition{
+				Operation: TokenQuery,
+				SelectionSet: &SelectionSet{
+					Selections: []Selection{
+						&Field{
+							Name: &Name{Value: "user"},
+							SelectionSet: &SelectionSet{
+								Selections: []Selection{
+									&InlineFragment{
+										TypeCondition: &NamedType{Name: &Name{Value: "User"}},
+										SelectionSet:  nil,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	v := DefaultValidator()
+	result := v.Validate(doc)
+	// Should not panic
+	if result == nil {
+		t.Fatal("Expected non-nil result")
+	}
+}
+
+func TestValidator_EmptySelectionSet(t *testing.T) {
+	doc := &Document{
+		Definitions: []Definition{
+			&OperationDefinition{
+				Operation:    TokenQuery,
+				SelectionSet: nil,
+			},
+		},
+	}
+
+	depth := CheckDepth(doc)
+	if depth != 0 {
+		t.Errorf("Expected depth 0 for nil selection set, got %d", depth)
+	}
+}
+
+func TestValidator_EmptyFragmentSelectionSet(t *testing.T) {
+	doc := &Document{
+		Definitions: []Definition{
+			&FragmentDefinition{
+				Name:          &Name{Value: "F"},
+				TypeCondition: &NamedType{Name: &Name{Value: "User"}},
+				SelectionSet:  nil,
+			},
+		},
+	}
+
+	depth := CheckDepth(doc)
+	if depth != 0 {
+		t.Errorf("Expected depth 0 for nil fragment selection set, got %d", depth)
+	}
+}
+
+func TestValidationError_Formatting(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      *ValidationError
+		expected string
+	}{
+		{
+			name:     "with line and column",
+			err:      &ValidationError{Message: "bad field", Line: 5, Column: 10},
+			expected: "bad field at line 5, column 10",
+		},
+		{
+			name:     "without position",
+			err:      &ValidationError{Message: "generic error"},
+			expected: "generic error",
+		},
+		{
+			name:     "line zero",
+			err:      &ValidationError{Message: "no pos", Line: 0, Column: 5},
+			expected: "no pos",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.err.Error() != tc.expected {
+				t.Errorf("expected %q, got %q", tc.expected, tc.err.Error())
+			}
+		})
+	}
+}
+
+func TestCheckDepth_MultipleOperations(t *testing.T) {
+	query := `
+		query Shallow { a { b } }
+		query Deep { x { y { z { w } } } }
+	`
+	doc, err := Parse(query)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	depth := CheckDepth(doc)
+	if depth != 4 {
+		t.Errorf("Expected depth 4 (from deeper query), got %d", depth)
+	}
+}
+
 // Benchmark validator
 func BenchmarkValidate(b *testing.B) {
 	query := `

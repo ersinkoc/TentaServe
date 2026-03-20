@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ersinkoc/tentaserve/internal/openapi"
+	"github.com/ersinkoc/tentaserve/internal/proxy/gql2rest"
 	"github.com/ersinkoc/tentaserve/internal/upstream"
 )
 
@@ -295,5 +296,80 @@ func TestParseFieldPath_Proxy(t *testing.T) {
 					tt.path, gotType, gotField, tt.wantType, tt.wantField)
 			}
 		})
+	}
+}
+
+func TestProxy_SetGetGQL2RESTHandler(t *testing.T) {
+	p := NewProxy(ProxyOptions{BaseURL: "http://example.com"})
+
+	// Initially nil
+	if got := p.GetGQL2RESTHandler(); got != nil {
+		t.Error("Expected nil GQL2REST handler initially")
+	}
+
+	// Create a handler and set it
+	handler := gql2rest.NewHandler(gql2rest.HandlerOptions{
+		BasePath:   "/api",
+		GraphQLURL: "http://localhost:4000/graphql",
+	})
+
+	p.SetGQL2RESTHandler(handler)
+
+	got := p.GetGQL2RESTHandler()
+	if got == nil {
+		t.Fatal("Expected non-nil GQL2REST handler after set")
+	}
+	if got != handler {
+		t.Error("GetGQL2RESTHandler returned a different handler than what was set")
+	}
+}
+
+func TestProxy_HandleREST_NotConfigured(t *testing.T) {
+	p := NewProxy(ProxyOptions{BaseURL: "http://example.com"})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/users", nil)
+	w := httptest.NewRecorder()
+
+	p.HandleREST(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected 503 when handler not configured, got %d", w.Code)
+	}
+}
+
+func TestProxy_HandleREST_WithHandler(t *testing.T) {
+	p := NewProxy(ProxyOptions{BaseURL: "http://example.com"})
+
+	// Create a mock GraphQL server that the handler will call
+	mockGQL := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"data":{"users":[{"id":"1","name":"Alice"}]}}`))
+	}))
+	defer mockGQL.Close()
+
+	handler := gql2rest.NewHandler(gql2rest.HandlerOptions{
+		BasePath:   "/api",
+		GraphQLURL: mockGQL.URL,
+		Endpoints: []gql2rest.Endpoint{
+			{
+				Path:        "/api/users",
+				Method:      "GET",
+				Field:       "users",
+				GraphQLType: "Query",
+			},
+		},
+	})
+
+	p.SetGQL2RESTHandler(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/users", nil)
+	w := httptest.NewRecorder()
+
+	p.HandleREST(w, req)
+
+	// The handler should process the request (not return 503)
+	if w.Code == http.StatusServiceUnavailable {
+		t.Error("Expected handler to process the request, got 503")
 	}
 }

@@ -323,3 +323,163 @@ func TestGraphQLError_Error(t *testing.T) {
 		t.Errorf("Expected error message 'Test error', got %s", err.Error())
 	}
 }
+
+func TestClient_AddHeadersFromContext(t *testing.T) {
+	tests := []struct {
+		name           string
+		ctxValues      map[string]string
+		wantHeaders    map[string]string
+	}{
+		{
+			name: "authorization header forwarded",
+			ctxValues: map[string]string{
+				"Authorization": "Bearer mytoken123",
+			},
+			wantHeaders: map[string]string{
+				"Authorization": "Bearer mytoken123",
+			},
+		},
+		{
+			name: "X-Request-ID header forwarded",
+			ctxValues: map[string]string{
+				"X-Request-ID": "req-abc-123",
+			},
+			wantHeaders: map[string]string{
+				"X-Request-ID": "req-abc-123",
+			},
+		},
+		{
+			name: "multiple headers forwarded",
+			ctxValues: map[string]string{
+				"Authorization": "Bearer tok",
+				"X-User-ID":     "user42",
+				"X-Tenant-ID":   "tenant99",
+				"X-Request-ID":  "req-xyz",
+			},
+			wantHeaders: map[string]string{
+				"Authorization": "Bearer tok",
+				"X-User-ID":     "user42",
+				"X-Tenant-ID":   "tenant99",
+				"X-Request-ID":  "req-xyz",
+			},
+		},
+		{
+			name:        "no context values",
+			ctxValues:   map[string]string{},
+			wantHeaders: map[string]string{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a mock server that captures received headers
+			var receivedHeaders http.Header
+			mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				receivedHeaders = r.Header
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"data":{}}`))
+			}))
+			defer mockServer.Close()
+
+			client := NewClient(ClientOptions{
+				Endpoint: mockServer.URL,
+			})
+
+			//nolint:staticcheck // using string keys for context is the pattern in the source code
+			ctx := context.Background()
+			for k, v := range tc.ctxValues {
+				ctx = context.WithValue(ctx, k, v)
+			}
+
+			req := QueryRequest{Query: "{ test }"}
+			_, err := client.Execute(ctx, req)
+			if err != nil {
+				t.Fatalf("Execute failed: %v", err)
+			}
+
+			for wantKey, wantVal := range tc.wantHeaders {
+				if got := receivedHeaders.Get(wantKey); got != wantVal {
+					t.Errorf("expected header %s=%q, got %q", wantKey, wantVal, got)
+				}
+			}
+		})
+	}
+}
+
+func TestClient_Introspect_GraphQLErrors(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response := map[string]interface{}{
+			"data": nil,
+			"errors": []map[string]interface{}{
+				{"message": "Introspection is disabled"},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer mockServer.Close()
+
+	client := NewClient(ClientOptions{Endpoint: mockServer.URL})
+
+	_, err := client.Introspect(context.Background())
+	if err == nil {
+		t.Fatal("Expected error from introspection with GraphQL errors")
+	}
+	if err.Error() != "introspection error: Introspection is disabled" {
+		t.Errorf("Unexpected error message: %s", err.Error())
+	}
+}
+
+func TestClient_Introspect_UpstreamError(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("server error"))
+	}))
+	defer mockServer.Close()
+
+	client := NewClient(ClientOptions{Endpoint: mockServer.URL})
+
+	_, err := client.Introspect(context.Background())
+	if err == nil {
+		t.Fatal("Expected error from introspection with upstream error")
+	}
+}
+
+func TestClient_Introspect_InvalidJSON(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Return valid top-level response but invalid data for introspection parsing
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"data":"not an object"}`))
+	}))
+	defer mockServer.Close()
+
+	client := NewClient(ClientOptions{Endpoint: mockServer.URL})
+
+	_, err := client.Introspect(context.Background())
+	if err == nil {
+		t.Fatal("Expected error from introspection with invalid data")
+	}
+}
+
+func TestClient_Introspect_NilSchemaInResponse(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Return valid structure but with null schema
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"data":{"__schema":null}}`))
+	}))
+	defer mockServer.Close()
+
+	client := NewClient(ClientOptions{Endpoint: mockServer.URL})
+
+	_, err := client.Introspect(context.Background())
+	if err == nil {
+		t.Fatal("Expected error for nil schema in response")
+	}
+	if err.Error() != "no schema in introspection response" {
+		t.Errorf("Unexpected error message: %s", err.Error())
+	}
+}

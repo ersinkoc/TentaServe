@@ -426,3 +426,106 @@ func findArgument(args []Argument, name string) *Argument {
 	}
 	return nil
 }
+
+// --- Additional tests for coverage ---
+
+func TestEndpoint_String(t *testing.T) {
+	tests := []struct {
+		name     string
+		endpoint Endpoint
+		expected string
+	}{
+		{
+			name: "GET query",
+			endpoint: Endpoint{
+				Method:      "GET",
+				Path:        "/api/users/{id}",
+				GraphQLType: "Query",
+				Field:       "getUser",
+			},
+			expected: "GET /api/users/{id} -> Query.getUser",
+		},
+		{
+			name: "POST mutation",
+			endpoint: Endpoint{
+				Method:      "POST",
+				Path:        "/api/users",
+				GraphQLType: "Mutation",
+				Field:       "createUser",
+			},
+			expected: "POST /api/users -> Mutation.createUser",
+		},
+		{
+			name: "DELETE mutation",
+			endpoint: Endpoint{
+				Method:      "DELETE",
+				Path:        "/api/users/{id}",
+				GraphQLType: "Mutation",
+				Field:       "deleteUser",
+			},
+			expected: "DELETE /api/users/{id} -> Mutation.deleteUser",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.endpoint.String()
+			if result != tt.expected {
+				t.Errorf("String() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestInferHTTPMethod(t *testing.T) {
+	builder := NewEndpointBuilder(EndpointBuilderOptions{
+		MutationsUse: "heuristic",
+	})
+
+	tests := []struct {
+		name     string
+		mutation string
+		expected string
+	}{
+		{"createUser -> POST", "createUser", "POST"},
+		{"addItem -> POST", "addItem", "POST"},
+		{"newOrder -> POST", "newOrder", "POST"},
+		{"insertRecord -> POST", "insertRecord", "POST"},
+		{"postComment -> POST", "postComment", "POST"},
+		{"updateUser -> PUT", "updateUser", "PUT"},
+		{"editProfile -> PUT", "editProfile", "PUT"},
+		{"modifySettings -> PUT", "modifySettings", "PUT"},
+		{"patchUser -> PUT", "patchUser", "PUT"},
+		{"putData -> PUT", "putData", "PUT"},
+		{"deleteUser -> DELETE", "deleteUser", "DELETE"},
+		{"removeItem -> DELETE", "removeItem", "DELETE"},
+		{"destroySession -> DELETE", "destroySession", "DELETE"},
+		{"dropTable -> DELETE", "dropTable", "DELETE"},
+		{"upsertUser -> PUT", "upsertUser", "PUT"},
+		{"mergeAccounts -> PUT", "mergeAccounts", "PUT"},
+		{"unknownAction -> POST", "unknownAction", "POST"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := builder.inferHTTPMethod(tt.mutation)
+			if result != tt.expected {
+				t.Errorf("inferHTTPMethod(%q) = %q, want %q", tt.mutation, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestInferHTTPMethod_AllPOST(t *testing.T) {
+	builder := NewEndpointBuilder(EndpointBuilderOptions{
+		MutationsUse: "POST",
+	})
+
+	mutations := []string{"createUser", "updateUser", "deleteUser", "unknownAction"}
+	for _, mutation := range mutations {
+		result := builder.inferHTTPMethod(mutation)
+		if result != "POST" {
+			t.Errorf("inferHTTPMethod(%q) with MutationsUse=POST = %q, want POST", mutation, result)
+		}
+	}
+}

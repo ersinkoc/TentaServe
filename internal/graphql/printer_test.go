@@ -1,6 +1,7 @@
 package graphql
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -535,6 +536,163 @@ func TestEscapeString(t *testing.T) {
 				t.Errorf("escapeString(%q) = %q, want %q", tt.input, result, tt.expected)
 			}
 		})
+	}
+}
+
+// --- Additional printer tests for coverage ---
+
+func TestPrintBlockString(t *testing.T) {
+	doc := &Document{
+		Definitions: []Definition{
+			&OperationDefinition{
+				Operation: TokenQuery,
+				SelectionSet: &SelectionSet{
+					Selections: []Selection{
+						&Field{
+							Name: &Name{Value: "user"},
+							Arguments: []*Argument{
+								{
+									Name:  &Name{Value: "bio"},
+									Value: &StringValue{Value: "line1\nline2", Block: true},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	result := Print(doc)
+	if !strings.Contains(result, `"""`) {
+		t.Errorf("expected block string with triple quotes, got: %s", result)
+	}
+}
+
+func TestPrintVariableDefinitionWithDefault(t *testing.T) {
+	query := `query GetUser($id: ID! = "default-id") { user(id: $id) { name } }`
+	doc, err := Parse(query)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	result := Print(doc)
+	if !strings.Contains(result, "= ") {
+		t.Errorf("expected default value in output, got: %s", result)
+	}
+
+	// Verify round-trip
+	doc2, err := Parse(result)
+	if err != nil {
+		t.Fatalf("Failed to parse printed output: %v\nPrinted: %s", err, result)
+	}
+	if !documentsEqual(doc, doc2) {
+		t.Errorf("round-trip mismatch\nOriginal: %s\nPrinted: %s", query, result)
+	}
+}
+
+func TestPrintInlineFragmentWithoutTypeCondition(t *testing.T) {
+	doc := &Document{
+		Definitions: []Definition{
+			&OperationDefinition{
+				Operation: TokenQuery,
+				SelectionSet: &SelectionSet{
+					Selections: []Selection{
+						&Field{
+							Name: &Name{Value: "user"},
+							SelectionSet: &SelectionSet{
+								Selections: []Selection{
+									&InlineFragment{
+										TypeCondition: nil,
+										SelectionSet: &SelectionSet{
+											Selections: []Selection{
+												&Field{Name: &Name{Value: "id"}},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	result := Print(doc)
+	if !strings.Contains(result, "...") {
+		t.Errorf("expected spread operator in output, got: %s", result)
+	}
+	// Should NOT contain "on" since TypeCondition is nil
+	if strings.Contains(result, " on ") {
+		t.Errorf("expected no type condition, got: %s", result)
+	}
+}
+
+func TestOperationTypeString(t *testing.T) {
+	tests := []struct {
+		kind     TokenKind
+		expected string
+	}{
+		{TokenQuery, "query"},
+		{TokenMutation, "mutation"},
+		{TokenSubscription, "subscription"},
+		{TokenEOF, ""},
+	}
+
+	for _, tc := range tests {
+		got := operationTypeString(tc.kind)
+		if got != tc.expected {
+			t.Errorf("operationTypeString(%v) = %q, want %q", tc.kind, got, tc.expected)
+		}
+	}
+}
+
+func TestPrintListType(t *testing.T) {
+	query := `query GetUsers($ids: [ID!]!) { users(ids: $ids) { id } }`
+	doc, err := Parse(query)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	result := Print(doc)
+	if !strings.Contains(result, "[ID!]!") {
+		t.Errorf("expected [ID!]! in output, got: %s", result)
+	}
+}
+
+func TestPrintBooleanValues(t *testing.T) {
+	query := `{ user(active: true, deleted: false) { id } }`
+	doc, err := Parse(query)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	result := Print(doc)
+	if !strings.Contains(result, "true") || !strings.Contains(result, "false") {
+		t.Errorf("expected true and false in output, got: %s", result)
+	}
+}
+
+func TestEscapeString_SpecialChars(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"\b", `\b`},
+		{"\f", `\f`},
+		{"\r", `\r`},
+		{"normal", "normal"},
+		{`with"quote`, `with\"quote`},
+		{"with\nnewline", `with\nnewline`},
+		{"with\ttab", `with\ttab`},
+	}
+
+	for _, tc := range tests {
+		got := escapeString(tc.input)
+		if got != tc.expected {
+			t.Errorf("escapeString(%q) = %q, want %q", tc.input, got, tc.expected)
+		}
 	}
 }
 

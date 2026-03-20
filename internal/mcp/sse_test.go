@@ -197,3 +197,234 @@ func TestSSETransportBroadcast(t *testing.T) {
 		t.Error("Timeout waiting for message")
 	}
 }
+
+// --- Additional tests for coverage ---
+
+// TestSSETransportHandleSSE_NonFlusher tests handleSSE with a non-flusher writer.
+func TestSSETransportHandleSSE_NonFlusher(t *testing.T) {
+	server := NewServer(nil, nil)
+	transport := NewSSETransport(server, nil, "/mcp")
+
+	// Use a custom non-flusher writer
+	req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
+	w := &nonFlusherWriter{httptest.NewRecorder()}
+
+	transport.handleSSE(w, req)
+
+	// Should get error about streaming not supported
+	if w.rec.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", w.rec.Code)
+	}
+}
+
+// nonFlusherWriter wraps httptest.ResponseRecorder but doesn't implement http.Flusher.
+type nonFlusherWriter struct {
+	rec *httptest.ResponseRecorder
+}
+
+func (w *nonFlusherWriter) Header() http.Header         { return w.rec.Header() }
+func (w *nonFlusherWriter) Write(b []byte) (int, error)  { return w.rec.Write(b) }
+func (w *nonFlusherWriter) WriteHeader(code int)          { w.rec.WriteHeader(code) }
+
+// TestSSETransportHandleMessage_InvalidSession tests POST with invalid session.
+func TestSSETransportHandleMessage_InvalidSession(t *testing.T) {
+	server := NewServer(nil, nil)
+	transport := NewSSETransport(server, nil, "/mcp")
+
+	body := `{"jsonrpc":"2.0","method":"test","id":1}`
+	req := httptest.NewRequest(http.MethodPost, "/mcp?session=nonexistent", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	transport.handleMessage(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", w.Code)
+	}
+}
+
+// TestSSETransportHandleMessage_ValidSession tests POST with a valid session and request.
+func TestSSETransportHandleMessage_ValidSession(t *testing.T) {
+	server := NewServer(nil, nil)
+	transport := NewSSETransport(server, nil, "/mcp")
+
+	// Add a session
+	transport.sessionsMu.Lock()
+	transport.sessions["test-session"] = &SSESession{
+		ID:       "test-session",
+		Done:     make(chan struct{}),
+		Messages: make(chan *SSEMessage, 10),
+	}
+	transport.sessionsMu.Unlock()
+
+	// Send initialize request
+	body := `{"jsonrpc":"2.0","method":"initialize","id":1}`
+	req := httptest.NewRequest(http.MethodPost, "/mcp?session=test-session", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	transport.handleMessage(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// TestSSETransportHandleMessage_Notification tests POST with a notification (no ID).
+func TestSSETransportHandleMessage_Notification(t *testing.T) {
+	server := NewServer(nil, nil)
+	// Register a handler for the notification method
+	server.Register("notifications/test", func(req *Request) (any, *Error) {
+		return nil, nil
+	})
+	transport := NewSSETransport(server, nil, "/mcp")
+
+	// Add a session
+	transport.sessionsMu.Lock()
+	transport.sessions["test-session"] = &SSESession{
+		ID:       "test-session",
+		Done:     make(chan struct{}),
+		Messages: make(chan *SSEMessage, 10),
+	}
+	transport.sessionsMu.Unlock()
+
+	// Send notification (no id field)
+	body := `{"jsonrpc":"2.0","method":"notifications/test"}`
+	req := httptest.NewRequest(http.MethodPost, "/mcp?session=test-session", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	transport.handleMessage(w, req)
+
+	if w.Code != http.StatusAccepted {
+		t.Errorf("Expected status 202, got %d", w.Code)
+	}
+}
+
+// TestSSETransportHandleMessage_InvalidJSON tests POST with invalid JSON body.
+func TestSSETransportHandleMessage_InvalidJSON(t *testing.T) {
+	server := NewServer(nil, nil)
+	transport := NewSSETransport(server, nil, "/mcp")
+
+	// Add a session
+	transport.sessionsMu.Lock()
+	transport.sessions["test-session"] = &SSESession{
+		ID:       "test-session",
+		Done:     make(chan struct{}),
+		Messages: make(chan *SSEMessage, 10),
+	}
+	transport.sessionsMu.Unlock()
+
+	body := `{invalid json`
+	req := httptest.NewRequest(http.MethodPost, "/mcp?session=test-session", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	transport.handleMessage(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+// TestSSETransportHandleMessage_BatchRequest tests POST with batch JSON-RPC request.
+func TestSSETransportHandleMessage_BatchRequest(t *testing.T) {
+	server := NewServer(nil, nil)
+	transport := NewSSETransport(server, nil, "/mcp")
+
+	// Add a session
+	transport.sessionsMu.Lock()
+	transport.sessions["test-session"] = &SSESession{
+		ID:       "test-session",
+		Done:     make(chan struct{}),
+		Messages: make(chan *SSEMessage, 10),
+	}
+	transport.sessionsMu.Unlock()
+
+	body := `[{"jsonrpc":"2.0","method":"initialize","id":1},{"jsonrpc":"2.0","method":"initialize","id":2}]`
+	req := httptest.NewRequest(http.MethodPost, "/mcp?session=test-session", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	transport.handleMessage(w, req)
+
+	// Should return OK with batch response
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// TestWriteJSONRPCError tests writeJSONRPCError.
+func TestWriteJSONRPCError(t *testing.T) {
+	server := NewServer(nil, nil)
+	transport := NewSSETransport(server, nil, "/mcp")
+
+	w := httptest.NewRecorder()
+	transport.writeJSONRPCError(w, NewRequestID(1), ErrParse)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+
+	ct := w.Header().Get("Content-Type")
+	if ct != "application/json" {
+		t.Errorf("Expected Content-Type application/json, got %s", ct)
+	}
+}
+
+// TestSendSSEMessage tests sendSSEMessage.
+func TestSendSSEMessage(t *testing.T) {
+	server := NewServer(nil, nil)
+	transport := NewSSETransport(server, nil, "/mcp")
+
+	w := httptest.NewRecorder()
+
+	t.Run("with event", func(t *testing.T) {
+		msg := &SSEMessage{Event: "test", Data: []byte("hello")}
+		transport.sendSSEMessage(w, w, msg)
+		body := w.Body.String()
+		if !strings.Contains(body, "event: test") {
+			t.Errorf("expected 'event: test' in body, got %q", body)
+		}
+		if !strings.Contains(body, "data: hello") {
+			t.Errorf("expected 'data: hello' in body, got %q", body)
+		}
+	})
+
+	t.Run("without event", func(t *testing.T) {
+		w2 := httptest.NewRecorder()
+		msg := &SSEMessage{Data: []byte("data-only")}
+		transport.sendSSEMessage(w2, w2, msg)
+		body := w2.Body.String()
+		if strings.Contains(body, "event:") {
+			t.Errorf("expected no event line, got %q", body)
+		}
+		if !strings.Contains(body, "data: data-only") {
+			t.Errorf("expected 'data: data-only' in body, got %q", body)
+		}
+	})
+}
+
+// TestSSETransportBroadcast_FullChannel tests broadcast when channel is full.
+func TestSSETransportBroadcast_FullChannel(t *testing.T) {
+	server := NewServer(nil, nil)
+	transport := NewSSETransport(server, nil, "/mcp")
+
+	// Create a session with a very small buffer
+	messages := make(chan *SSEMessage, 1)
+	// Fill the channel
+	messages <- &SSEMessage{Event: "old", Data: []byte("old")}
+
+	session := &SSESession{
+		ID:       "full-session",
+		Messages: messages,
+	}
+
+	transport.sessionsMu.Lock()
+	transport.sessions["full-session"] = session
+	transport.sessionsMu.Unlock()
+
+	// This should not block - message should be dropped
+	transport.Broadcast("new", []byte("new"))
+
+	// The channel should still have the old message
+	msg := <-messages
+	if msg.Event != "old" {
+		t.Errorf("expected old message to still be there, got event %s", msg.Event)
+	}
+}

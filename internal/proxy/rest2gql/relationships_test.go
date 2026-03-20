@@ -286,3 +286,154 @@ func TestDetectRelationships_EmptySpec(t *testing.T) {
 		t.Error("Expected nil for empty paths")
 	}
 }
+
+// --- Additional tests for coverage ---
+
+func TestRelationship_HasParentRelationship(t *testing.T) {
+	tests := []struct {
+		name     string
+		rel      Relationship
+		expected bool
+	}{
+		{
+			"has parent",
+			Relationship{ParentPath: "/users/{id}", Type: RelationshipOneToMany},
+			true,
+		},
+		{
+			"no type",
+			Relationship{ParentPath: "/users/{id}", Type: RelationshipNone},
+			false,
+		},
+		{
+			"no parent path",
+			Relationship{ParentPath: "", Type: RelationshipOneToMany},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.rel.HasParentRelationship()
+			if result != tt.expected {
+				t.Errorf("HasParentRelationship() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestRelationship_IsNestedResource(t *testing.T) {
+	tests := []struct {
+		name     string
+		rel      Relationship
+		expected bool
+	}{
+		{
+			"nested resource",
+			Relationship{ParentPath: "/users/{id}", ChildPath: "/users/{id}/posts"},
+			true,
+		},
+		{
+			"not nested no braces",
+			Relationship{ParentPath: "/users", ChildPath: "/posts"},
+			false,
+		},
+		{
+			"child doesn't contain parent",
+			Relationship{ParentPath: "/users/{id}", ChildPath: "/posts/{postId}"},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.rel.IsNestedResource()
+			if result != tt.expected {
+				t.Errorf("IsNestedResource() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDetermineFieldName_AllTypes(t *testing.T) {
+	detector := NewRelationshipDetector()
+
+	t.Run("one to one", func(t *testing.T) {
+		result := detector.determineFieldName("Profile", RelationshipOneToOne)
+		if result != "profile" {
+			t.Errorf("expected 'profile', got %q", result)
+		}
+	})
+
+	t.Run("many to one", func(t *testing.T) {
+		result := detector.determineFieldName("Author", RelationshipManyToOne)
+		if result != "author" {
+			t.Errorf("expected 'author', got %q", result)
+		}
+	})
+
+	t.Run("none type", func(t *testing.T) {
+		result := detector.determineFieldName("Thing", RelationshipNone)
+		if result != "thing" {
+			t.Errorf("expected 'thing', got %q", result)
+		}
+	})
+}
+
+func TestToCamelCase(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"", ""},
+		{"User", "user"},
+		{"user", "user"},
+		{"ABC", "aBC"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := toCamelCase(tt.input)
+			if result != tt.expected {
+				t.Errorf("toCamelCase(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestToPascalCase(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"", ""},
+		{"user", "User"},
+		{"user-profile", "UserProfile"},
+		{"user_profile", "UserProfile"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := toPascalCase(tt.input)
+			if result != tt.expected {
+				t.Errorf("toPascalCase(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSchemaBuilder_GetRegistry(t *testing.T) {
+	builder := NewSchemaBuilder(SchemaBuilderOptions{})
+	reg := builder.GetRegistry()
+	if reg == nil {
+		t.Error("expected non-nil registry")
+	}
+}
+
+func TestSchemaBuilder_GetMapper(t *testing.T) {
+	builder := NewSchemaBuilder(SchemaBuilderOptions{})
+	mapper := builder.GetMapper()
+	if mapper == nil {
+		t.Error("expected non-nil mapper")
+	}
+}

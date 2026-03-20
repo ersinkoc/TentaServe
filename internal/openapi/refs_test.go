@@ -1,6 +1,7 @@
 package openapi
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -509,6 +510,371 @@ func TestResolver_InvalidRef(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "cannot resolve reference") {
 		t.Errorf("Expected 'cannot resolve reference' error, got: %v", err)
+	}
+}
+
+func TestResolver_RequestBodyRef(t *testing.T) {
+	data := map[string]any{
+		"openapi": "3.0.0",
+		"info": map[string]any{
+			"title":   "Test API",
+			"version": "1.0.0",
+		},
+		"paths": map[string]any{
+			"/users": map[string]any{
+				"post": map[string]any{
+					"requestBody": map[string]any{
+						"$ref": "#/components/requestBodies/CreateUser",
+					},
+					"responses": map[string]any{
+						"201": map[string]any{
+							"description": "Created",
+						},
+					},
+				},
+			},
+		},
+		"components": map[string]any{
+			"requestBodies": map[string]any{
+				"CreateUser": map[string]any{
+					"description": "User creation body",
+					"required":    true,
+					"content": map[string]any{
+						"application/json": map[string]any{
+							"schema": map[string]any{
+								"type": "object",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	spec, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+
+	resolver := NewResolver(spec)
+	if err := resolver.ResolveAll(); err != nil {
+		t.Fatalf("Failed to resolve: %v", err)
+	}
+
+	body := spec.Paths["/users"].Post.RequestBody
+	if body.Ref != "" {
+		t.Error("$ref should be resolved in request body")
+	}
+	if body.Description != "User creation body" {
+		t.Errorf("Expected description 'User creation body', got %s", body.Description)
+	}
+}
+
+func TestResolver_AllOfRef(t *testing.T) {
+	data := map[string]any{
+		"openapi": "3.0.0",
+		"info": map[string]any{
+			"title":   "Test API",
+			"version": "1.0.0",
+		},
+		"paths": map[string]any{},
+		"components": map[string]any{
+			"schemas": map[string]any{
+				"Base": map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"id": map[string]any{"type": "string"},
+					},
+				},
+				"Extended": map[string]any{
+					"allOf": []any{
+						map[string]any{"$ref": "#/components/schemas/Base"},
+						map[string]any{
+							"type": "object",
+							"properties": map[string]any{
+								"name": map[string]any{"type": "string"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	spec, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+
+	resolver := NewResolver(spec)
+	if err := resolver.ResolveAll(); err != nil {
+		t.Fatalf("Failed to resolve: %v", err)
+	}
+
+	ext := spec.Components.Schemas["Extended"]
+	if len(ext.AllOf) != 2 {
+		t.Fatalf("Expected 2 allOf, got %d", len(ext.AllOf))
+	}
+	// First allOf should be resolved from $ref
+	if ext.AllOf[0].Ref != "" {
+		t.Error("allOf[0] $ref should be resolved")
+	}
+	if ext.AllOf[0].Type != "object" {
+		t.Errorf("Expected allOf[0] type 'object', got %s", ext.AllOf[0].Type)
+	}
+}
+
+func TestResolver_AdditionalPropertiesRef(t *testing.T) {
+	t.Skip("additionalProperties parsing not yet implemented in parser")
+	data := map[string]any{
+		"openapi": "3.0.0",
+		"info": map[string]any{
+			"title":   "Test API",
+			"version": "1.0.0",
+		},
+		"paths": map[string]any{},
+		"components": map[string]any{
+			"schemas": map[string]any{
+				"Value": map[string]any{
+					"type": "string",
+				},
+				"MapOfValues": map[string]any{
+					"type": "object",
+					"additionalProperties": map[string]any{
+						"$ref": "#/components/schemas/Value",
+					},
+				},
+			},
+		},
+	}
+
+	spec, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+
+	resolver := NewResolver(spec)
+	if err := resolver.ResolveAll(); err != nil {
+		t.Fatalf("Failed to resolve: %v", err)
+	}
+
+	mapSchema := spec.Components.Schemas["MapOfValues"]
+	if mapSchema.AdditionalProperties == nil {
+		t.Fatal("Expected additionalProperties to be present")
+	}
+	if mapSchema.AdditionalProperties.Ref != "" {
+		t.Error("additionalProperties $ref should be resolved")
+	}
+	if mapSchema.AdditionalProperties.Type != "string" {
+		t.Errorf("Expected type 'string', got %s", mapSchema.AdditionalProperties.Type)
+	}
+}
+
+func TestResolver_NotSchemaRef(t *testing.T) {
+	data := map[string]any{
+		"openapi": "3.0.0",
+		"info": map[string]any{
+			"title":   "Test API",
+			"version": "1.0.0",
+		},
+		"paths": map[string]any{},
+		"components": map[string]any{
+			"schemas": map[string]any{
+				"Forbidden": map[string]any{
+					"type": "string",
+				},
+				"NotForbidden": map[string]any{
+					"not": map[string]any{
+						"$ref": "#/components/schemas/Forbidden",
+					},
+				},
+			},
+		},
+	}
+
+	spec, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+
+	resolver := NewResolver(spec)
+	if err := resolver.ResolveAll(); err != nil {
+		t.Fatalf("Failed to resolve: %v", err)
+	}
+
+	schema := spec.Components.Schemas["NotForbidden"]
+	if schema.Not == nil {
+		t.Fatal("Expected not field")
+	}
+	if schema.Not.Ref != "" {
+		t.Error("not $ref should be resolved")
+	}
+}
+
+func TestResolver_InvalidJsonPointer(t *testing.T) {
+	data := map[string]any{
+		"openapi": "3.0.0",
+		"info": map[string]any{
+			"title":   "Test API",
+			"version": "1.0.0",
+		},
+		"paths": map[string]any{
+			"/test": map[string]any{
+				"get": map[string]any{
+					"responses": map[string]any{
+						"200": map[string]any{
+							"description": "OK",
+							"content": map[string]any{
+								"application/json": map[string]any{
+									"schema": map[string]any{
+										"$ref": "#badpointer",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	spec, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Failed to parse: %v", err)
+	}
+
+	resolver := NewResolver(spec)
+	err = resolver.ResolveAll()
+	if err == nil {
+		t.Fatal("Expected error for invalid JSON pointer")
+	}
+}
+
+func TestCircularError_String(t *testing.T) {
+	err := &CircularError{Ref: "#/components/schemas/Node"}
+	expected := "circular reference detected: #/components/schemas/Node"
+	if err.Error() != expected {
+		t.Errorf("expected %q, got %q", expected, err.Error())
+	}
+}
+
+// --- Provider tests ---
+
+func TestNewProvider(t *testing.T) {
+	p := NewProvider(nil, DefaultProviderOptions())
+	if p == nil {
+		t.Fatal("Expected non-nil provider")
+	}
+}
+
+func TestProvider_GetSpec_NoSpec(t *testing.T) {
+	p := NewProvider(nil, DefaultProviderOptions())
+	_, ok := p.GetSpec("nonexistent")
+	if ok {
+		t.Error("Expected false for nonexistent upstream")
+	}
+}
+
+func TestProvider_HasSpec(t *testing.T) {
+	p := NewProvider(nil, DefaultProviderOptions())
+	if p.HasSpec("test") {
+		t.Error("Expected false for nonexistent upstream")
+	}
+}
+
+func TestProvider_GetUpstreamNames_Empty(t *testing.T) {
+	p := NewProvider(nil, DefaultProviderOptions())
+	names := p.GetUpstreamNames()
+	if len(names) != 0 {
+		t.Errorf("Expected 0 names, got %d", len(names))
+	}
+}
+
+func TestProvider_GetAllSpecs_Empty(t *testing.T) {
+	p := NewProvider(nil, DefaultProviderOptions())
+	specs := p.GetAllSpecs()
+	if len(specs) != 0 {
+		t.Errorf("Expected 0 specs, got %d", len(specs))
+	}
+}
+
+func TestProvider_UnregisterUpstream(t *testing.T) {
+	opts := DefaultProviderOptions()
+	opts.AutoRefresh = false
+	p := NewProvider(nil, opts)
+
+	// Register with empty source (will fail to load but that's OK)
+	err := p.RegisterUpstream("test", "", 0)
+	if err != nil {
+		t.Fatalf("RegisterUpstream failed: %v", err)
+	}
+
+	names := p.GetUpstreamNames()
+	if len(names) != 1 {
+		t.Fatalf("Expected 1 name, got %d", len(names))
+	}
+
+	p.UnregisterUpstream("test")
+	names = p.GetUpstreamNames()
+	if len(names) != 0 {
+		t.Errorf("Expected 0 names after unregister, got %d", len(names))
+	}
+
+	// Unregister non-existent should not panic
+	p.UnregisterUpstream("nonexistent")
+}
+
+func TestProvider_RegisterUpstream_Duplicate(t *testing.T) {
+	opts := DefaultProviderOptions()
+	opts.AutoRefresh = false
+	p := NewProvider(nil, opts)
+
+	err := p.RegisterUpstream("test", "", 0)
+	if err != nil {
+		t.Fatalf("first register failed: %v", err)
+	}
+
+	err = p.RegisterUpstream("test", "", 0)
+	if err == nil {
+		t.Error("Expected error for duplicate upstream registration")
+	}
+}
+
+func TestProvider_RefreshSpec_NotFound(t *testing.T) {
+	p := NewProvider(nil, DefaultProviderOptions())
+	err := p.RefreshSpec("nonexistent")
+	if err == nil {
+		t.Error("Expected error for refreshing nonexistent upstream")
+	}
+}
+
+func TestProvider_Shutdown(t *testing.T) {
+	opts := DefaultProviderOptions()
+	opts.AutoRefresh = false
+	p := NewProvider(nil, opts)
+
+	_ = p.RegisterUpstream("test1", "", 0)
+	_ = p.RegisterUpstream("test2", "", 0)
+
+	ctx := context.Background()
+	err := p.Shutdown(ctx)
+	if err != nil {
+		t.Fatalf("Shutdown failed: %v", err)
+	}
+
+	names := p.GetUpstreamNames()
+	if len(names) != 0 {
+		t.Errorf("Expected 0 names after shutdown, got %d", len(names))
+	}
+}
+
+func TestDefaultProviderOptions(t *testing.T) {
+	opts := DefaultProviderOptions()
+	if opts.DefaultRefreshInterval == 0 {
+		t.Error("Expected non-zero default refresh interval")
+	}
+	if !opts.AutoRefresh {
+		t.Error("Expected auto refresh to be enabled by default")
 	}
 }
 

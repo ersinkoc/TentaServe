@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -401,4 +402,105 @@ func TestRequestNewErrorResponse(t *testing.T) {
 	if resp.ID.String() != "abc" {
 		t.Errorf("Expected id abc, got %s", resp.ID.String())
 	}
+}
+
+// --- Additional tests for coverage ---
+
+func TestRequestIDValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		id       *RequestID
+		wantNil  bool
+	}{
+		{"nil ID", nil, true},
+		{"string value", NewRequestID("test"), false},
+		{"int value", NewRequestID(42), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			val := tt.id.Value()
+			if tt.wantNil {
+				if val != nil {
+					t.Errorf("expected nil, got %v", val)
+				}
+			} else {
+				if val == nil {
+					t.Error("expected non-nil value")
+				}
+			}
+		})
+	}
+}
+
+func TestRequestIDString_UnknownType(t *testing.T) {
+	rid := &RequestID{value: struct{}{}}
+	result := rid.String()
+	if result != "" {
+		t.Errorf("expected empty string for unknown type, got %q", result)
+	}
+}
+
+func TestParseRequestFromReader(t *testing.T) {
+	t.Run("valid request", func(t *testing.T) {
+		reader := strings.NewReader(`{"jsonrpc":"2.0","method":"test","id":1}`)
+		req, err := ParseRequestFromReader(reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if req.Method != "test" {
+			t.Errorf("expected method test, got %s", req.Method)
+		}
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		reader := strings.NewReader(`{invalid}`)
+		_, err := ParseRequestFromReader(reader)
+		if err == nil {
+			t.Error("expected error for invalid JSON")
+		}
+	})
+
+	t.Run("missing version", func(t *testing.T) {
+		reader := strings.NewReader(`{"method":"test"}`)
+		_, err := ParseRequestFromReader(reader)
+		if err == nil {
+			t.Error("expected error for missing jsonrpc version")
+		}
+	})
+}
+
+func TestParseRequestBatchFromReader(t *testing.T) {
+	t.Run("valid batch", func(t *testing.T) {
+		reader := strings.NewReader(`[{"jsonrpc":"2.0","method":"test1","id":1},{"jsonrpc":"2.0","method":"test2","id":2}]`)
+		reqs, err := ParseRequestBatchFromReader(reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(reqs) != 2 {
+			t.Errorf("expected 2 requests, got %d", len(reqs))
+		}
+	})
+
+	t.Run("single request returns nil", func(t *testing.T) {
+		reader := strings.NewReader(`{"jsonrpc":"2.0","method":"test","id":1}`)
+		reqs, err := ParseRequestBatchFromReader(reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if reqs != nil {
+			t.Error("expected nil for single request")
+		}
+	})
+
+	t.Run("empty data", func(t *testing.T) {
+		reader := strings.NewReader(``)
+		reqs, err := ParseRequestBatchFromReader(reader)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if reqs != nil {
+			t.Error("expected nil for empty data")
+		}
+	})
 }

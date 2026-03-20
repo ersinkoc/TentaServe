@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ersinkoc/tentaserve/internal/admin"
 	"github.com/ersinkoc/tentaserve/internal/config"
 	"github.com/ersinkoc/tentaserve/internal/gateway/auth"
 	"github.com/ersinkoc/tentaserve/internal/gateway/breaker"
@@ -18,6 +19,7 @@ import (
 	"github.com/ersinkoc/tentaserve/internal/gateway/metrics"
 	"github.com/ersinkoc/tentaserve/internal/gateway/middleware"
 	"github.com/ersinkoc/tentaserve/internal/gateway/ratelimit"
+	"github.com/ersinkoc/tentaserve/internal/llmstxt"
 	"github.com/ersinkoc/tentaserve/internal/observability"
 	"github.com/ersinkoc/tentaserve/internal/server"
 )
@@ -227,6 +229,49 @@ func createHandler(cfg *config.Config, logger *observability.Logger, mcpServer *
 		})
 	}
 
+	// Admin dashboard
+	if cfg.Admin.Enabled {
+		adminPath := cfg.Admin.Path
+		if adminPath == "" {
+			adminPath = "/-/admin"
+		}
+		adminOpts := admin.Options{}
+		if cfg.Admin.Auth != nil && cfg.Admin.Auth.Username != "" {
+			adminOpts.BasicAuth = &admin.BasicAuth{
+				Username: cfg.Admin.Auth.Username,
+				Password: cfg.Admin.Auth.Password,
+			}
+		}
+		adminHandler := admin.NewHandler(adminOpts)
+		mux.Handle(adminPath+"/", adminHandler)
+		mux.Handle(adminPath, adminHandler)
+		logger.Info("Admin dashboard enabled", slog.String("path", adminPath))
+	}
+
+	// llms.txt endpoint
+	llmsCfg := llmstxt.Config{
+		Version:     version,
+		Host:        cfg.Server.Host,
+		Port:        cfg.Server.Port,
+		GraphQLPath: cfg.Gateway.GraphQLPath,
+		RESTPrefix:  cfg.Gateway.RESTPrefix,
+		MCPPath:     cfg.Gateway.MCPPath,
+	}
+	for _, u := range cfg.Upstreams {
+		llmsCfg.Upstreams = append(llmsCfg.Upstreams, llmstxt.Upstream{
+			Name:     u.Name,
+			Type:     u.Type,
+			BaseURL:  u.BaseURL,
+			Endpoint: u.Endpoint,
+		})
+	}
+	llmsContent := llmstxt.Generate(llmsCfg)
+	mux.HandleFunc("GET /llms.txt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(llmsContent))
+	})
+
 	// REST endpoints - create handler with upstream routing
 	restHandler := NewRESTHandler(cfg, logger.Logger)
 	mux.Handle(cfg.Gateway.RESTPrefix+"/", restHandler)
@@ -351,10 +396,41 @@ func createAuthMiddleware(cfg *config.Config, logger *observability.Logger) *aut
 func loggingMiddleware(logger *observability.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// TODO: Implement proper request logging with duration
-			next.ServeHTTP(w, r)
+			start := time.Now()
+			sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+			next.ServeHTTP(sw, r)
+			duration := time.Since(start)
+			logger.Info("request",
+				slog.String("method", r.Method),
+				slog.String("path", r.URL.Path),
+				slog.Int("status", sw.status),
+				slog.Duration("duration", duration),
+				slog.String("remote", r.RemoteAddr),
+			)
 		})
 	}
+}
+
+// statusWriter wraps ResponseWriter to capture the status code.
+type statusWriter struct {
+	http.ResponseWriter
+	status      int
+	wroteHeader bool
+}
+
+func (w *statusWriter) WriteHeader(code int) {
+	if !w.wroteHeader {
+		w.status = code
+		w.wroteHeader = true
+	}
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w *statusWriter) Write(b []byte) (int, error) {
+	if !w.wroteHeader {
+		w.wroteHeader = true
+	}
+	return w.ResponseWriter.Write(b)
 }
 
 func printVersion() {

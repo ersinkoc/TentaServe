@@ -8,8 +8,8 @@ import (
 
 // GraphQLResponse represents a GraphQL response.
 type GraphQLResponse struct {
-	Data   json.RawMessage   `json:"data"`
-	Errors []GraphQLError    `json:"errors,omitempty"`
+	Data   json.RawMessage `json:"data"`
+	Errors []GraphQLError  `json:"errors,omitempty"`
 }
 
 // GraphQLError represents a GraphQL error with extensions.

@@ -30,7 +30,7 @@ func TestErrorMapper_MapRESTError_DefaultMappings(t *testing.T) {
 	mapper := NewErrorMapper(ErrorMapperOptions{})
 
 	tests := []struct {
-		statusCode int
+		statusCode   int
 		expectedCode string
 	}{
 		{http.StatusBadRequest, "BAD_REQUEST"},

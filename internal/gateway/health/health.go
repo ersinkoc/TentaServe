@@ -30,11 +30,11 @@ type CheckResult struct {
 
 // Response is the health check HTTP response.
 type Response struct {
-	Status    Status          `json:"status"`
-	Version   string          `json:"version,omitempty"`
-	Uptime    time.Duration   `json:"uptime_ms"`
-	Timestamp time.Time       `json:"timestamp"`
-	Checks    []*CheckResult  `json:"checks,omitempty"`
+	Status    Status         `json:"status"`
+	Version   string         `json:"version,omitempty"`
+	Uptime    time.Duration  `json:"uptime_ms"`
+	Timestamp time.Time      `json:"timestamp"`
+	Checks    []*CheckResult `json:"checks,omitempty"`
 }
 
 // Check is a health check function.

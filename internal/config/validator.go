@@ -456,8 +456,8 @@ func (a *AdminConfig) Validate() error {
 // Validate checks the admin auth configuration.
 func (a *AdminAuth) Validate() error {
 	validTypes := map[string]bool{
-		"basic":   true,
-		"bearer":  true,
+		"basic":  true,
+		"bearer": true,
 	}
 
 	if !validTypes[a.Type] {

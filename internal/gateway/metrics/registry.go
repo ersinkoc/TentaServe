@@ -31,10 +31,10 @@ type Metric struct {
 
 // Registry holds all metrics.
 type Registry struct {
-	mu       sync.RWMutex
-	metrics  map[string]*Metric
-	counters map[string]*CounterVec
-	gauges   map[string]*GaugeVec
+	mu         sync.RWMutex
+	metrics    map[string]*Metric
+	counters   map[string]*CounterVec
+	gauges     map[string]*GaugeVec
 	histograms map[string]*HistogramVec
 }
 
@@ -123,12 +123,12 @@ func (r *Registry) Get(name string) *Metric {
 func (r *Registry) Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4")
-		r.WriteTo(w)
+		r.WriteMetrics(w)
 	})
 }
 
-// WriteTo writes metrics in Prometheus format.
-func (r *Registry) WriteTo(w io.Writer) {
+// WriteMetrics writes metrics in Prometheus format.
+func (r *Registry) WriteMetrics(w io.Writer) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -176,7 +176,7 @@ func (cv *CounterVec) With(labelValues ...string) *CounterValue {
 	}
 
 	v = &CounterValue{
-		labels:     cv.metric.Labels,
+		labels:      cv.metric.Labels,
 		labelValues: labelValues,
 	}
 	cv.values[key] = v
@@ -386,10 +386,10 @@ func (hv *HistogramVec) writeTo(w io.Writer) {
 
 // HistogramValue is a single histogram value.
 type HistogramValue struct {
-	buckets  []float64
-	counts   []atomic.Uint64
-	sum      atomic.Uint64
-	count    atomic.Uint64
+	buckets []float64
+	counts  []atomic.Uint64
+	sum     atomic.Uint64
+	count   atomic.Uint64
 }
 
 func newHistogramValue(buckets []float64) *HistogramValue {

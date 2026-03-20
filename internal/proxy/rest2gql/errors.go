@@ -146,7 +146,7 @@ func extractField(body, field string) string {
 // IsRetryableError determines if an error is retryable.
 func (em *ErrorMapper) IsRetryableError(statusCode int) bool {
 	switch statusCode {
-	case http.StatusBadGateway,      // 502
+	case http.StatusBadGateway, // 502
 		http.StatusServiceUnavailable, // 503
 		http.StatusGatewayTimeout:     // 504
 		return true

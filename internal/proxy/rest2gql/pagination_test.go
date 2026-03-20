@@ -207,9 +207,9 @@ func TestPaginationTranslator_ToRESTParams_Cursor(t *testing.T) {
 	pt := NewPaginationTranslator(PaginationTranslatorOptions{})
 
 	params := &PaginationParams{
-		Style:  CursorPagination,
-		After:  "abc123",
-		Limit:  10,
+		Style: CursorPagination,
+		After: "abc123",
+		Limit: 10,
 	}
 
 	restParams := pt.ToRESTParams(params, CursorPagination)
@@ -228,9 +228,9 @@ func TestPaginationTranslator_ToRESTParams_Relay(t *testing.T) {
 	pt := NewPaginationTranslator(PaginationTranslatorOptions{})
 
 	params := &PaginationParams{
-		Style:  RelayPagination,
-		After:  "abc123",
-		Limit:  10,
+		Style: RelayPagination,
+		After: "abc123",
+		Limit: 10,
 	}
 
 	restParams := pt.ToRESTParams(params, RelayPagination)
@@ -300,10 +300,10 @@ func TestPaginationTranslator_clampLimit(t *testing.T) {
 		input    int
 		expected int
 	}{
-		{0, 20},   // Zero -> default
-		{-1, 20},  // Negative -> default
-		{5, 5},    // Valid -> unchanged
-		{50, 50},  // Valid -> unchanged
+		{0, 20},    // Zero -> default
+		{-1, 20},   // Negative -> default
+		{5, 5},     // Valid -> unchanged
+		{50, 50},   // Valid -> unchanged
 		{100, 100}, // At max -> unchanged
 		{150, 100}, // Over max -> clamped
 	}

@@ -71,7 +71,7 @@ func TestGraphQLHandlerIntegration(t *testing.T) {
 		}
 
 		var result struct {
-			Data   map[string]interface{} `json:"data"`
+			Data   map[string]interface{}   `json:"data"`
 			Errors []map[string]interface{} `json:"errors"`
 		}
 		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
@@ -102,7 +102,7 @@ func TestGraphQLHandlerIntegration(t *testing.T) {
 		}
 
 		var result struct {
-			Data   map[string]interface{} `json:"data"`
+			Data   map[string]interface{}   `json:"data"`
 			Errors []map[string]interface{} `json:"errors"`
 		}
 		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
@@ -154,7 +154,7 @@ func TestGraphQLHandlerIntegration(t *testing.T) {
 		}
 
 		var result struct {
-			Data   map[string]interface{} `json:"data"`
+			Data   map[string]interface{}   `json:"data"`
 			Errors []map[string]interface{} `json:"errors"`
 		}
 		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {

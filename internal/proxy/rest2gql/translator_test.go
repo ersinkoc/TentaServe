@@ -126,9 +126,9 @@ func TestTranslator_HandleHTTP(t *testing.T) {
 
 func TestParseFieldPath(t *testing.T) {
 	tests := []struct {
-		path         string
-		wantType     string
-		wantField    string
+		path      string
+		wantType  string
+		wantField string
 	}{
 		{"Query.users", "Query", "users"},
 		{"Mutation.createUser", "Mutation", "createUser"},

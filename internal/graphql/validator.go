@@ -6,7 +6,7 @@ import (
 
 // Validator provides GraphQL query validation.
 type Validator struct {
-	maxDepth     int
+	maxDepth      int
 	maxComplexity int
 }
 

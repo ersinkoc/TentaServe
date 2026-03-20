@@ -29,8 +29,8 @@ const (
 	TokenListMarker
 	TokenColon
 	TokenComment
-	TokenLiteralPipe    // |
-	TokenFoldedGreater  // >
+	TokenLiteralPipe   // |
+	TokenFoldedGreater // >
 )
 
 // Token represents a lexical token in YAML.

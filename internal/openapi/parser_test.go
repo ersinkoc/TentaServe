@@ -304,8 +304,8 @@ func TestParse_Schemas(t *testing.T) {
 							"maxLength": 100,
 						},
 						"email": map[string]any{
-							"type":    "string",
-							"format":  "email",
+							"type":     "string",
+							"format":   "email",
 							"nullable": true,
 						},
 						"tags": map[string]any{
@@ -924,11 +924,11 @@ func TestParse_SchemaNumericConstraints(t *testing.T) {
 			"schemas": map[string]any{
 				"Rating": map[string]any{
 					"type":             "number",
-					"minimum":         float64(0),
-					"maximum":         float64(5),
+					"minimum":          float64(0),
+					"maximum":          float64(5),
 					"exclusiveMinimum": true,
 					"exclusiveMaximum": true,
-					"multipleOf":      float64(0.5),
+					"multipleOf":       float64(0.5),
 				},
 			},
 		},
@@ -1208,9 +1208,9 @@ func TestValidationError_WithAndWithoutPath(t *testing.T) {
 
 func TestValidateSpec(t *testing.T) {
 	tests := []struct {
-		name      string
-		spec      *OpenAPISpec
-		wantErrs  int
+		name     string
+		spec     *OpenAPISpec
+		wantErrs int
 	}{
 		{
 			name: "valid spec",

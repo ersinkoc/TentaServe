@@ -18,21 +18,21 @@ var (
 	ErrUpstreamNotFound    = errors.New("upstream not found")
 
 	// Gateway errors
-	ErrCircuitOpen     = errors.New("circuit breaker open")
-	ErrRateLimited     = errors.New("rate limit exceeded")
-	ErrAuthFailed      = errors.New("authentication failed")
-	ErrCacheMiss       = errors.New("cache miss")
-	ErrCacheFull       = errors.New("cache full")
+	ErrCircuitOpen = errors.New("circuit breaker open")
+	ErrRateLimited = errors.New("rate limit exceeded")
+	ErrAuthFailed  = errors.New("authentication failed")
+	ErrCacheMiss   = errors.New("cache miss")
+	ErrCacheFull   = errors.New("cache full")
 
 	// Configuration errors
-	ErrConfigInvalid   = errors.New("invalid configuration")
-	ErrConfigNotFound  = errors.New("configuration file not found")
-	ErrConfigParse     = errors.New("configuration parse error")
+	ErrConfigInvalid  = errors.New("invalid configuration")
+	ErrConfigNotFound = errors.New("configuration file not found")
+	ErrConfigParse    = errors.New("configuration parse error")
 
 	// Schema errors
-	ErrSchemaInvalid   = errors.New("invalid schema")
-	ErrSchemaNotFound  = errors.New("schema not found")
-	ErrSchemaMismatch  = errors.New("schema type mismatch")
+	ErrSchemaInvalid  = errors.New("invalid schema")
+	ErrSchemaNotFound = errors.New("schema not found")
+	ErrSchemaMismatch = errors.New("schema type mismatch")
 
 	// GraphQL errors
 	ErrQueryTooComplex = errors.New("query exceeds complexity limit")
@@ -41,9 +41,9 @@ var (
 	ErrQueryNotFound   = errors.New("field not found in schema")
 
 	// Parsing errors
-	ErrParseError      = errors.New("parse error")
-	ErrRefNotFound     = errors.New("reference not found")
-	ErrCircularRef     = errors.New("circular reference detected")
+	ErrParseError  = errors.New("parse error")
+	ErrRefNotFound = errors.New("reference not found")
+	ErrCircularRef = errors.New("circular reference detected")
 )
 
 // ErrorCode is a machine-readable error identifier.
@@ -56,19 +56,19 @@ const (
 	CodeUpstreamNotFound    ErrorCode = "UPSTREAM_NOT_FOUND"
 
 	// Gateway error codes
-	CodeCircuitOpen     ErrorCode = "CIRCUIT_OPEN"
-	CodeRateLimited     ErrorCode = "RATE_LIMITED"
-	CodeAuthFailed      ErrorCode = "AUTH_FAILED"
-	CodeCacheMiss       ErrorCode = "CACHE_MISS"
+	CodeCircuitOpen ErrorCode = "CIRCUIT_OPEN"
+	CodeRateLimited ErrorCode = "RATE_LIMITED"
+	CodeAuthFailed  ErrorCode = "AUTH_FAILED"
+	CodeCacheMiss   ErrorCode = "CACHE_MISS"
 
 	// Configuration error codes
-	CodeConfigInvalid   ErrorCode = "CONFIG_INVALID"
-	CodeConfigNotFound  ErrorCode = "CONFIG_NOT_FOUND"
-	CodeConfigParse     ErrorCode = "CONFIG_PARSE_ERROR"
+	CodeConfigInvalid  ErrorCode = "CONFIG_INVALID"
+	CodeConfigNotFound ErrorCode = "CONFIG_NOT_FOUND"
+	CodeConfigParse    ErrorCode = "CONFIG_PARSE_ERROR"
 
 	// Schema error codes
-	CodeSchemaInvalid   ErrorCode = "SCHEMA_INVALID"
-	CodeSchemaNotFound  ErrorCode = "SCHEMA_NOT_FOUND"
+	CodeSchemaInvalid  ErrorCode = "SCHEMA_INVALID"
+	CodeSchemaNotFound ErrorCode = "SCHEMA_NOT_FOUND"
 
 	// GraphQL error codes
 	CodeQueryTooComplex ErrorCode = "QUERY_TOO_COMPLEX"
@@ -76,8 +76,8 @@ const (
 	CodeQueryInvalid    ErrorCode = "QUERY_INVALID"
 
 	// General error codes
-	CodeInternalError   ErrorCode = "INTERNAL_ERROR"
-	CodeNotImplemented  ErrorCode = "NOT_IMPLEMENTED"
+	CodeInternalError  ErrorCode = "INTERNAL_ERROR"
+	CodeNotImplemented ErrorCode = "NOT_IMPLEMENTED"
 )
 
 // TentaserveError is a rich error type that provides context for debugging

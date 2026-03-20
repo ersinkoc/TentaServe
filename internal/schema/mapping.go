@@ -207,7 +207,7 @@ func (fm *FieldMapper) mapSliceReverse(slice []interface{}) []interface{} {
 
 // PerUpstreamFieldMapper manages field mappers for multiple upstreams.
 type PerUpstreamFieldMapper struct {
-	mappers map[string]*FieldMapper
+	mappers       map[string]*FieldMapper
 	defaultMapper *FieldMapper
 }
 

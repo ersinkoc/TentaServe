@@ -264,7 +264,7 @@ func TestEqualFold(t *testing.T) {
 func TestHasPrefix(t *testing.T) {
 	tests := []struct {
 		s, prefix string
-		want     bool
+		want      bool
 	}{
 		{"Authorization", "Auth", true},
 		{"authorization", "AUTH", true},

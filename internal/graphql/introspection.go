@@ -162,33 +162,33 @@ type SchemaData struct {
 
 // Schema represents the introspected GraphQL schema.
 type Schema struct {
-	QueryType        *TypeRef              `json:"queryType"`
-	MutationType     *TypeRef              `json:"mutationType"`
-	SubscriptionType *TypeRef              `json:"subscriptionType"`
-	Types            []IntrospectionType   `json:"types"`
+	QueryType        *TypeRef                 `json:"queryType"`
+	MutationType     *TypeRef                 `json:"mutationType"`
+	SubscriptionType *TypeRef                 `json:"subscriptionType"`
+	Types            []IntrospectionType      `json:"types"`
 	Directives       []IntrospectionDirective `json:"directives"`
 }
 
 // IntrospectionType represents a GraphQL type from introspection.
 type IntrospectionType struct {
-	Kind            string                `json:"kind"`
-	Name            string                `json:"name"`
-	Description     string                `json:"description"`
-	Fields          []IntrospectionField  `json:"fields"`
-	InputFields     []InputValue          `json:"inputFields"`
-	Interfaces      []TypeRef             `json:"interfaces"`
-	EnumValues      []IntrospectionEnumValue `json:"enumValues"`
-	PossibleTypes   []TypeRef             `json:"possibleTypes"`
+	Kind          string                   `json:"kind"`
+	Name          string                   `json:"name"`
+	Description   string                   `json:"description"`
+	Fields        []IntrospectionField     `json:"fields"`
+	InputFields   []InputValue             `json:"inputFields"`
+	Interfaces    []TypeRef                `json:"interfaces"`
+	EnumValues    []IntrospectionEnumValue `json:"enumValues"`
+	PossibleTypes []TypeRef                `json:"possibleTypes"`
 }
 
 // IntrospectionField represents a field in a type.
 type IntrospectionField struct {
-	Name              string      `json:"name"`
-	Description       string      `json:"description"`
+	Name              string       `json:"name"`
+	Description       string       `json:"description"`
 	Args              []InputValue `json:"args"`
-	Type              TypeRef     `json:"type"`
-	IsDeprecated      bool        `json:"isDeprecated"`
-	DeprecationReason string      `json:"deprecationReason"`
+	Type              TypeRef      `json:"type"`
+	IsDeprecated      bool         `json:"isDeprecated"`
+	DeprecationReason string       `json:"deprecationReason"`
 }
 
 // InputValue represents an input value (argument or input field).

@@ -199,8 +199,8 @@ func TestHandlerNestedQuery(t *testing.T) {
 	// Register resolvers for nested data
 	handler.RegisterResolver("Query", "user", func(ctx context.Context, parent interface{}, args map[string]interface{}) (interface{}, error) {
 		return map[string]interface{}{
-			"id":   "1",
-			"name": "John Doe",
+			"id":    "1",
+			"name":  "John Doe",
 			"email": "john@example.com",
 		}, nil
 	})

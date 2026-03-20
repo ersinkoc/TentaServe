@@ -326,9 +326,9 @@ func TestGraphQLError_Error(t *testing.T) {
 
 func TestClient_AddHeadersFromContext(t *testing.T) {
 	tests := []struct {
-		name           string
-		ctxValues      map[string]string
-		wantHeaders    map[string]string
+		name        string
+		ctxValues   map[string]string
+		wantHeaders map[string]string
 	}{
 		{
 			name: "authorization header forwarded",

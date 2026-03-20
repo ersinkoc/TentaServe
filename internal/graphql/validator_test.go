@@ -100,38 +100,38 @@ func TestValidator_Depth(t *testing.T) {
 
 func TestValidator_Complexity(t *testing.T) {
 	tests := []struct {
-		name     string
-		query    string
+		name        string
+		query       string
 		minExpected int // complexity varies by implementation, check it's reasonable
 	}{
 		{
-			name:     "single field",
-			query:    `{ user }`,
+			name:        "single field",
+			query:       `{ user }`,
 			minExpected: 1,
 		},
 		{
-			name:     "multiple fields flat",
-			query:    `{ user { id name email phone } }`,
+			name:        "multiple fields flat",
+			query:       `{ user { id name email phone } }`,
 			minExpected: 4,
 		},
 		{
-			name:     "nested fields",
-			query:    `{ user { posts { title body author { name } } } }`,
+			name:        "nested fields",
+			query:       `{ user { posts { title body author { name } } } }`,
 			minExpected: 10,
 		},
 		{
-			name:     "wide query with lists",
-			query:    `{ users { id name email posts { title comments { text } } } }`,
+			name:        "wide query with lists",
+			query:       `{ users { id name email posts { title comments { text } } } }`,
 			minExpected: 20,
 		},
 		{
-			name:     "query with arguments",
-			query:    `{ user(id: 1, active: true) { name } }`,
+			name:        "query with arguments",
+			query:       `{ user(id: 1, active: true) { name } }`,
 			minExpected: 5,
 		},
 		{
-			name:     "query with directives",
-			query:    `{ user @include(if: true) { name @skip(if: false) } }`,
+			name:        "query with directives",
+			query:       `{ user @include(if: true) { name @skip(if: false) } }`,
 			minExpected: 4,
 		},
 	}
@@ -154,51 +154,51 @@ func TestValidator_Complexity(t *testing.T) {
 
 func TestValidator_Validate(t *testing.T) {
 	tests := []struct {
-		name            string
-		query           string
-		maxDepth        int
-		maxComplexity   int
-		expectDepthErr  bool
+		name                string
+		query               string
+		maxDepth            int
+		maxComplexity       int
+		expectDepthErr      bool
 		expectComplexityErr bool
 	}{
 		{
-			name:         "within limits",
-			query:        `{ user { id name } }`,
-			maxDepth:     10,
-			maxComplexity: 100,
-			expectDepthErr: false,
+			name:                "within limits",
+			query:               `{ user { id name } }`,
+			maxDepth:            10,
+			maxComplexity:       100,
+			expectDepthErr:      false,
 			expectComplexityErr: false,
 		},
 		{
-			name:         "exceeds depth limit",
-			query:        `{ a { b { c { d { e { f { g { h { i { j { k } } } } } } } } } } }`,
-			maxDepth:     10,
-			maxComplexity: 1000,
-			expectDepthErr: true,
+			name:                "exceeds depth limit",
+			query:               `{ a { b { c { d { e { f { g { h { i { j { k } } } } } } } } } } }`,
+			maxDepth:            10,
+			maxComplexity:       1000,
+			expectDepthErr:      true,
 			expectComplexityErr: false,
 		},
 		{
-			name:         "exceeds complexity limit",
-			query:        `{ f1 { f2 { f3 { f4 { f5 { f6 { f7 { f8 { f9 { f10 } } } } } } } } } }`,
-			maxDepth:     20,
-			maxComplexity: 50,
-			expectDepthErr: false,
+			name:                "exceeds complexity limit",
+			query:               `{ f1 { f2 { f3 { f4 { f5 { f6 { f7 { f8 { f9 { f10 } } } } } } } } } }`,
+			maxDepth:            20,
+			maxComplexity:       50,
+			expectDepthErr:      false,
 			expectComplexityErr: true,
 		},
 		{
-			name:         "exceeds both limits",
-			query:        `{ a { b { c { d { e { f { g { h { i { j { k { l } } } } } } } } } } } }`,
-			maxDepth:     10,
-			maxComplexity: 50,
-			expectDepthErr: true,
+			name:                "exceeds both limits",
+			query:               `{ a { b { c { d { e { f { g { h { i { j { k { l } } } } } } } } } } } }`,
+			maxDepth:            10,
+			maxComplexity:       50,
+			expectDepthErr:      true,
 			expectComplexityErr: true,
 		},
 		{
-			name:         "at exact depth limit",
-			query:        `{ a { b { c { d { e { f { g { h { i { j } } } } } } } } } }`,
-			maxDepth:     10,
-			maxComplexity: 1000,
-			expectDepthErr: false,
+			name:                "at exact depth limit",
+			query:               `{ a { b { c { d { e { f { g { h { i { j } } } } } } } } } }`,
+			maxDepth:            10,
+			maxComplexity:       1000,
+			expectDepthErr:      false,
 			expectComplexityErr: false,
 		},
 	}

@@ -255,7 +255,7 @@ func TestStoreClientIP(t *testing.T) {
 		{
 			name:       "X-Forwarded-For takes precedence over X-Real-Ip",
 			remoteAddr: "10.0.0.1:1234",
-			headers:    map[string]string{
+			headers: map[string]string{
 				"X-Forwarded-For": "192.168.1.1",
 				"X-Real-Ip":       "192.168.2.2",
 			},

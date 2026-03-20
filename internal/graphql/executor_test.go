@@ -1512,18 +1512,18 @@ func TestExecutor_ExecuteFragmentSpread_DirectCall(t *testing.T) {
 		expectFieldLen int
 	}{
 		{
-			name:       "undefined fragment returns nil with error",
-			parent:     map[string]interface{}{"__typename": "User", "id": "1"},
-			parentType: "User",
+			name:         "undefined fragment returns nil with error",
+			parent:       map[string]interface{}{"__typename": "User", "id": "1"},
+			parentType:   "User",
 			fragmentName: "Missing",
 			fragments:    nil,
 			expectNil:    true,
 			expectError:  true,
 		},
 		{
-			name:       "type condition mismatch returns nil",
-			parent:     map[string]interface{}{"__typename": "User", "id": "1"},
-			parentType: "User",
+			name:         "type condition mismatch returns nil",
+			parent:       map[string]interface{}{"__typename": "User", "id": "1"},
+			parentType:   "User",
 			fragmentName: "AdminFields",
 			fragments: []*FragmentDefinition{
 				{
@@ -1537,9 +1537,9 @@ func TestExecutor_ExecuteFragmentSpread_DirectCall(t *testing.T) {
 			expectNil: true,
 		},
 		{
-			name:       "type condition match returns fields",
-			parent:     map[string]interface{}{"__typename": "User", "id": "1", "name": "Alice"},
-			parentType: "User",
+			name:         "type condition match returns fields",
+			parent:       map[string]interface{}{"__typename": "User", "id": "1", "name": "Alice"},
+			parentType:   "User",
 			fragmentName: "UserFields",
 			fragments: []*FragmentDefinition{
 				{
@@ -1557,9 +1557,9 @@ func TestExecutor_ExecuteFragmentSpread_DirectCall(t *testing.T) {
 			expectFieldLen: 2,
 		},
 		{
-			name:       "non-map parent uses parentType",
-			parent:     "string-parent",
-			parentType: "User",
+			name:         "non-map parent uses parentType",
+			parent:       "string-parent",
+			parentType:   "User",
 			fragmentName: "UserFields",
 			fragments: []*FragmentDefinition{
 				{
@@ -1573,9 +1573,9 @@ func TestExecutor_ExecuteFragmentSpread_DirectCall(t *testing.T) {
 			expectNil: false,
 		},
 		{
-			name:       "fragment without type condition",
-			parent:     map[string]interface{}{"id": "1"},
-			parentType: "Query",
+			name:         "fragment without type condition",
+			parent:       map[string]interface{}{"id": "1"},
+			parentType:   "Query",
 			fragmentName: "NoType",
 			fragments: []*FragmentDefinition{
 				{

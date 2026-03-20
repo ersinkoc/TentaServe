@@ -374,4 +374,3 @@ func TestGQL2REST_FieldParamParser(t *testing.T) {
 		})
 	}
 }
-

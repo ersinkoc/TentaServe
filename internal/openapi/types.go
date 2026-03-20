@@ -65,8 +65,8 @@ type License struct {
 
 // Server provides connectivity information.
 type Server struct {
-	URL         string                    `json:"url"`
-	Description string                    `json:"description,omitempty"`
+	URL         string                     `json:"url"`
+	Description string                     `json:"description,omitempty"`
 	Variables   map[string]*ServerVariable `json:"variables,omitempty"`
 }
 
@@ -79,34 +79,34 @@ type ServerVariable struct {
 
 // PathItem describes the operations available on a single path.
 type PathItem struct {
-	Ref         string      `json:"$ref,omitempty"`
-	Summary     string      `json:"summary,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Get         *Operation  `json:"get,omitempty"`
-	Put         *Operation  `json:"put,omitempty"`
-	Post        *Operation  `json:"post,omitempty"`
-	Delete      *Operation  `json:"delete,omitempty"`
-	Options     *Operation  `json:"options,omitempty"`
-	Head        *Operation  `json:"head,omitempty"`
-	Patch       *Operation  `json:"patch,omitempty"`
-	Trace       *Operation  `json:"trace,omitempty"`
-	Servers     []Server    `json:"servers,omitempty"`
+	Ref         string       `json:"$ref,omitempty"`
+	Summary     string       `json:"summary,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Get         *Operation   `json:"get,omitempty"`
+	Put         *Operation   `json:"put,omitempty"`
+	Post        *Operation   `json:"post,omitempty"`
+	Delete      *Operation   `json:"delete,omitempty"`
+	Options     *Operation   `json:"options,omitempty"`
+	Head        *Operation   `json:"head,omitempty"`
+	Patch       *Operation   `json:"patch,omitempty"`
+	Trace       *Operation   `json:"trace,omitempty"`
+	Servers     []Server     `json:"servers,omitempty"`
 	Parameters  []*Parameter `json:"parameters,omitempty"`
 }
 
 // Operation describes a single API operation on a path.
 type Operation struct {
-	Tags         []string              `json:"tags,omitempty"`
-	Summary      string                `json:"summary,omitempty"`
-	Description  string                `json:"description,omitempty"`
+	Tags         []string               `json:"tags,omitempty"`
+	Summary      string                 `json:"summary,omitempty"`
+	Description  string                 `json:"description,omitempty"`
 	ExternalDocs *ExternalDocumentation `json:"externalDocs,omitempty"`
-	OperationID  string                `json:"operationId,omitempty"`
-	Parameters   []*Parameter          `json:"parameters,omitempty"`
-	RequestBody  *RequestBody          `json:"requestBody,omitempty"`
-	Responses    map[string]*Response  `json:"responses"`
-	Deprecated   bool                  `json:"deprecated,omitempty"`
-	Security     []SecurityRequirement `json:"security,omitempty"`
-	Servers      []Server              `json:"servers,omitempty"`
+	OperationID  string                 `json:"operationId,omitempty"`
+	Parameters   []*Parameter           `json:"parameters,omitempty"`
+	RequestBody  *RequestBody           `json:"requestBody,omitempty"`
+	Responses    map[string]*Response   `json:"responses"`
+	Deprecated   bool                   `json:"deprecated,omitempty"`
+	Security     []SecurityRequirement  `json:"security,omitempty"`
+	Servers      []Server               `json:"servers,omitempty"`
 }
 
 // HTTPMethod represents an HTTP method.
@@ -161,16 +161,16 @@ type ExternalDocumentation struct {
 
 // Parameter describes a single operation parameter.
 type Parameter struct {
-	Ref         string          `json:"$ref,omitempty"`
-	Name        string          `json:"name"`
-	In          string          `json:"in"`
-	Description string          `json:"description,omitempty"`
-	Required    bool            `json:"required,omitempty"`
-	Deprecated  bool            `json:"deprecated,omitempty"`
-	AllowEmptyValue bool        `json:"allowEmptyValue,omitempty"`
-	Schema      *SchemaObject   `json:"schema,omitempty"`
-	Example     interface{}     `json:"example,omitempty"`
-	Examples    map[string]*Example `json:"examples,omitempty"`
+	Ref             string              `json:"$ref,omitempty"`
+	Name            string              `json:"name"`
+	In              string              `json:"in"`
+	Description     string              `json:"description,omitempty"`
+	Required        bool                `json:"required,omitempty"`
+	Deprecated      bool                `json:"deprecated,omitempty"`
+	AllowEmptyValue bool                `json:"allowEmptyValue,omitempty"`
+	Schema          *SchemaObject       `json:"schema,omitempty"`
+	Example         interface{}         `json:"example,omitempty"`
+	Examples        map[string]*Example `json:"examples,omitempty"`
 }
 
 // ParameterLocation represents where a parameter is located.
@@ -185,19 +185,19 @@ const (
 
 // RequestBody describes the request body.
 type RequestBody struct {
-	Ref         string               `json:"$ref,omitempty"`
-	Description string               `json:"description,omitempty"`
+	Ref         string                `json:"$ref,omitempty"`
+	Description string                `json:"description,omitempty"`
 	Content     map[string]*MediaType `json:"content"`
-	Required    bool                 `json:"required,omitempty"`
+	Required    bool                  `json:"required,omitempty"`
 }
 
 // Response describes a single response from an API operation.
 type Response struct {
-	Ref         string               `json:"$ref,omitempty"`
-	Description string               `json:"description"`
-	Headers     map[string]*Header   `json:"headers,omitempty"`
+	Ref         string                `json:"$ref,omitempty"`
+	Description string                `json:"description"`
+	Headers     map[string]*Header    `json:"headers,omitempty"`
 	Content     map[string]*MediaType `json:"content,omitempty"`
-	Links       map[string]*Link     `json:"links,omitempty"`
+	Links       map[string]*Link      `json:"links,omitempty"`
 }
 
 // MediaType provides schema and examples for a media type.
@@ -210,82 +210,82 @@ type MediaType struct {
 
 // Example represents an example value.
 type Example struct {
-	Ref         string      `json:"$ref,omitempty"`
-	Summary     string      `json:"summary,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Value       interface{} `json:"value,omitempty"`
-	ExternalValue string    `json:"externalValue,omitempty"`
+	Ref           string      `json:"$ref,omitempty"`
+	Summary       string      `json:"summary,omitempty"`
+	Description   string      `json:"description,omitempty"`
+	Value         interface{} `json:"value,omitempty"`
+	ExternalValue string      `json:"externalValue,omitempty"`
 }
 
 // Encoding defines an encoding for a single property.
 type Encoding struct {
-	ContentType   string            `json:"contentType,omitempty"`
+	ContentType   string             `json:"contentType,omitempty"`
 	Headers       map[string]*Header `json:"headers,omitempty"`
-	Style         string            `json:"style,omitempty"`
-	Explode       bool              `json:"explode,omitempty"`
-	AllowReserved bool              `json:"allowReserved,omitempty"`
+	Style         string             `json:"style,omitempty"`
+	Explode       bool               `json:"explode,omitempty"`
+	AllowReserved bool               `json:"allowReserved,omitempty"`
 }
 
 // Header follows the structure of Parameter but with different fields.
 type Header struct {
-	Ref         string          `json:"$ref,omitempty"`
-	Description string          `json:"description,omitempty"`
-	Required    bool            `json:"required,omitempty"`
-	Deprecated  bool            `json:"deprecated,omitempty"`
-	Schema      *SchemaObject   `json:"schema,omitempty"`
-	Example     interface{}     `json:"example,omitempty"`
+	Ref         string        `json:"$ref,omitempty"`
+	Description string        `json:"description,omitempty"`
+	Required    bool          `json:"required,omitempty"`
+	Deprecated  bool          `json:"deprecated,omitempty"`
+	Schema      *SchemaObject `json:"schema,omitempty"`
+	Example     interface{}   `json:"example,omitempty"`
 }
 
 // Link represents a possible design-time link for a response.
 type Link struct {
-	Ref         string      `json:"$ref,omitempty"`
-	OperationID string      `json:"operationId,omitempty"`
-	OperationRef string     `json:"operationRef,omitempty"`
-	Parameters  map[string]interface{} `json:"parameters,omitempty"`
-	RequestBody interface{} `json:"requestBody,omitempty"`
-	Description string      `json:"description,omitempty"`
-	Server      *Server     `json:"server,omitempty"`
+	Ref          string                 `json:"$ref,omitempty"`
+	OperationID  string                 `json:"operationId,omitempty"`
+	OperationRef string                 `json:"operationRef,omitempty"`
+	Parameters   map[string]interface{} `json:"parameters,omitempty"`
+	RequestBody  interface{}            `json:"requestBody,omitempty"`
+	Description  string                 `json:"description,omitempty"`
+	Server       *Server                `json:"server,omitempty"`
 }
 
 // SchemaObject defines a data schema.
 type SchemaObject struct {
-	Ref                  string                 `json:"$ref,omitempty"`
-	Title                string                 `json:"title,omitempty"`
-	MultipleOf           float64                `json:"multipleOf,omitempty"`
-	Maximum              float64                `json:"maximum,omitempty"`
-	ExclusiveMaximum     bool                   `json:"exclusiveMaximum,omitempty"`
-	Minimum              float64                `json:"minimum,omitempty"`
-	ExclusiveMinimum     bool                   `json:"exclusiveMinimum,omitempty"`
-	MaxLength            int                    `json:"maxLength,omitempty"`
-	MinLength            int                    `json:"minLength,omitempty"`
-	Pattern              string                 `json:"pattern,omitempty"`
-	MaxItems             int                    `json:"maxItems,omitempty"`
-	MinItems             int                    `json:"minItems,omitempty"`
-	UniqueItems          bool                   `json:"uniqueItems,omitempty"`
-	MaxProperties        int                    `json:"maxProperties,omitempty"`
-	MinProperties        int                    `json:"minProperties,omitempty"`
-	Required             []string               `json:"required,omitempty"`
-	Enum                 []interface{}          `json:"enum,omitempty"`
-	Type                 string                 `json:"type,omitempty"`
-	AllOf                []*SchemaObject        `json:"allOf,omitempty"`
-	OneOf                []*SchemaObject        `json:"oneOf,omitempty"`
-	AnyOf                []*SchemaObject        `json:"anyOf,omitempty"`
-	Not                  *SchemaObject          `json:"not,omitempty"`
-	Items                *SchemaObject          `json:"items,omitempty"`
+	Ref                  string                   `json:"$ref,omitempty"`
+	Title                string                   `json:"title,omitempty"`
+	MultipleOf           float64                  `json:"multipleOf,omitempty"`
+	Maximum              float64                  `json:"maximum,omitempty"`
+	ExclusiveMaximum     bool                     `json:"exclusiveMaximum,omitempty"`
+	Minimum              float64                  `json:"minimum,omitempty"`
+	ExclusiveMinimum     bool                     `json:"exclusiveMinimum,omitempty"`
+	MaxLength            int                      `json:"maxLength,omitempty"`
+	MinLength            int                      `json:"minLength,omitempty"`
+	Pattern              string                   `json:"pattern,omitempty"`
+	MaxItems             int                      `json:"maxItems,omitempty"`
+	MinItems             int                      `json:"minItems,omitempty"`
+	UniqueItems          bool                     `json:"uniqueItems,omitempty"`
+	MaxProperties        int                      `json:"maxProperties,omitempty"`
+	MinProperties        int                      `json:"minProperties,omitempty"`
+	Required             []string                 `json:"required,omitempty"`
+	Enum                 []interface{}            `json:"enum,omitempty"`
+	Type                 string                   `json:"type,omitempty"`
+	AllOf                []*SchemaObject          `json:"allOf,omitempty"`
+	OneOf                []*SchemaObject          `json:"oneOf,omitempty"`
+	AnyOf                []*SchemaObject          `json:"anyOf,omitempty"`
+	Not                  *SchemaObject            `json:"not,omitempty"`
+	Items                *SchemaObject            `json:"items,omitempty"`
 	Properties           map[string]*SchemaObject `json:"properties,omitempty"`
-	AdditionalProperties *SchemaObject          `json:"additionalProperties,omitempty"`
-	Description          string                 `json:"description,omitempty"`
-	Format               string                 `json:"format,omitempty"`
-	Default              interface{}            `json:"default,omitempty"`
-	Nullable             bool                   `json:"nullable,omitempty"`
-	ReadOnly             bool                   `json:"readOnly,omitempty"`
-	WriteOnly            bool                   `json:"writeOnly,omitempty"`
-	Example              interface{}            `json:"example,omitempty"`
-	Deprecated           bool                   `json:"deprecated,omitempty"`
+	AdditionalProperties *SchemaObject            `json:"additionalProperties,omitempty"`
+	Description          string                   `json:"description,omitempty"`
+	Format               string                   `json:"format,omitempty"`
+	Default              interface{}              `json:"default,omitempty"`
+	Nullable             bool                     `json:"nullable,omitempty"`
+	ReadOnly             bool                     `json:"readOnly,omitempty"`
+	WriteOnly            bool                     `json:"writeOnly,omitempty"`
+	Example              interface{}              `json:"example,omitempty"`
+	Deprecated           bool                     `json:"deprecated,omitempty"`
 	// OpenAPI 3.1 only
-	Const        interface{}            `json:"const,omitempty"`
-	ExclusiveMaximumNum *float64        `json:"exclusiveMaximumNum,omitempty"`
-	ExclusiveMinimumNum *float64        `json:"exclusiveMinimumNum,omitempty"`
+	Const               interface{} `json:"const,omitempty"`
+	ExclusiveMaximumNum *float64    `json:"exclusiveMaximumNum,omitempty"`
+	ExclusiveMinimumNum *float64    `json:"exclusiveMinimumNum,omitempty"`
 }
 
 // SchemaType represents the JSON Schema type.
@@ -334,37 +334,37 @@ func (s *SchemaObject) GetEffectiveType() string {
 
 // Components holds a set of reusable objects.
 type Components struct {
-	Schemas         map[string]*SchemaObject  `json:"schemas,omitempty"`
-	Responses       map[string]*Response      `json:"responses,omitempty"`
-	Parameters      map[string]*Parameter     `json:"parameters,omitempty"`
-	Examples        map[string]*Example       `json:"examples,omitempty"`
-	RequestBodies   map[string]*RequestBody   `json:"requestBodies,omitempty"`
-	Headers         map[string]*Header        `json:"headers,omitempty"`
+	Schemas         map[string]*SchemaObject   `json:"schemas,omitempty"`
+	Responses       map[string]*Response       `json:"responses,omitempty"`
+	Parameters      map[string]*Parameter      `json:"parameters,omitempty"`
+	Examples        map[string]*Example        `json:"examples,omitempty"`
+	RequestBodies   map[string]*RequestBody    `json:"requestBodies,omitempty"`
+	Headers         map[string]*Header         `json:"headers,omitempty"`
 	SecuritySchemes map[string]*SecurityScheme `json:"securitySchemes,omitempty"`
-	Links           map[string]*Link          `json:"links,omitempty"`
-	Callbacks       map[string]interface{}    `json:"callbacks,omitempty"`
+	Links           map[string]*Link           `json:"links,omitempty"`
+	Callbacks       map[string]interface{}     `json:"callbacks,omitempty"`
 }
 
 // SecurityScheme defines a security scheme.
 type SecurityScheme struct {
-	Ref              string `json:"$ref,omitempty"`
-	Type             string `json:"type"`
-	Description      string `json:"description,omitempty"`
-	Name             string `json:"name,omitempty"`
-	In               string `json:"in,omitempty"`
-	Scheme           string `json:"scheme,omitempty"`
-	BearerFormat     string `json:"bearerFormat,omitempty"`
+	Ref              string      `json:"$ref,omitempty"`
+	Type             string      `json:"type"`
+	Description      string      `json:"description,omitempty"`
+	Name             string      `json:"name,omitempty"`
+	In               string      `json:"in,omitempty"`
+	Scheme           string      `json:"scheme,omitempty"`
+	BearerFormat     string      `json:"bearerFormat,omitempty"`
 	Flows            *OAuthFlows `json:"flows,omitempty"`
-	OpenIDConnectURL string `json:"openIdConnectUrl,omitempty"`
+	OpenIDConnectURL string      `json:"openIdConnectUrl,omitempty"`
 }
 
 // SecuritySchemeType represents the type of security scheme.
 type SecuritySchemeType string
 
 const (
-	SecurityHTTP         SecuritySchemeType = "http"
-	SecurityAPIKey       SecuritySchemeType = "apiKey"
-	SecurityOAuth2       SecuritySchemeType = "oauth2"
+	SecurityHTTP          SecuritySchemeType = "http"
+	SecurityAPIKey        SecuritySchemeType = "apiKey"
+	SecurityOAuth2        SecuritySchemeType = "oauth2"
 	SecurityOpenIDConnect SecuritySchemeType = "openIdConnect"
 )
 
@@ -378,9 +378,9 @@ type OAuthFlows struct {
 
 // OAuthFlow describes an OAuth flow.
 type OAuthFlow struct {
-	AuthorizationURL string `json:"authorizationUrl,omitempty"`
-	TokenURL         string `json:"tokenUrl,omitempty"`
-	RefreshURL       string `json:"refreshUrl,omitempty"`
+	AuthorizationURL string            `json:"authorizationUrl,omitempty"`
+	TokenURL         string            `json:"tokenUrl,omitempty"`
+	RefreshURL       string            `json:"refreshUrl,omitempty"`
 	Scopes           map[string]string `json:"scopes"`
 }
 

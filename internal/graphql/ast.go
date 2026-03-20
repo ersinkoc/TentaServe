@@ -27,11 +27,11 @@ type Definition interface {
 
 // OperationDefinition represents a query, mutation, or subscription.
 type OperationDefinition struct {
-	Operation TokenKind // TokenQuery, TokenMutation, or TokenSubscription
-	Name      *Name
+	Operation           TokenKind // TokenQuery, TokenMutation, or TokenSubscription
+	Name                *Name
 	VariableDefinitions []*VariableDefinition
-	Directives  []*Directive
-	SelectionSet *SelectionSet
+	Directives          []*Directive
+	SelectionSet        *SelectionSet
 }
 
 func (o *OperationDefinition) definitionNode() {}

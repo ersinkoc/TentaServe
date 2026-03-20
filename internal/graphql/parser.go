@@ -6,11 +6,11 @@ import (
 
 // Parser parses GraphQL tokens into an AST.
 type Parser struct {
-	l       *Lexer
-	curTok  Token
+	l        *Lexer
+	curTok   Token
 	savedTok Token // for peek without consuming
 	hasSaved bool
-	errors  []error
+	errors   []error
 }
 
 // NewParser creates a new parser from a lexer.

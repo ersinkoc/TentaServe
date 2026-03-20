@@ -155,9 +155,9 @@ func TestTranslator_Translate(t *testing.T) {
 	translator := NewTranslator(schema)
 
 	tests := []struct {
-		name         string
-		restReq      RESTRequest
-		endpoint     Endpoint
+		name          string
+		restReq       RESTRequest
+		endpoint      Endpoint
 		expectedQuery string
 	}{
 		{

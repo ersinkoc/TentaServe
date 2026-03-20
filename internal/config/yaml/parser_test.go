@@ -451,8 +451,8 @@ func TestUnmarshalMap(t *testing.T) {
 
 	data := map[string]any{
 		"headers": map[string]any{
-			"X-Custom":       "value1",
-			"Authorization":  "Bearer token",
+			"X-Custom":      "value1",
+			"Authorization": "Bearer token",
 		},
 	}
 

@@ -69,9 +69,9 @@ func (k TypeKind) String() string {
 // TypeRef is a reference to a type.
 type TypeRef struct {
 	Kind     TypeKind
-	Name     string       // For named types (Object, Enum, Scalar, etc.)
-	OfType   *TypeRef     // For List and NonNull
-	EnumVals []string     // For Enum types
+	Name     string   // For named types (Object, Enum, Scalar, etc.)
+	OfType   *TypeRef // For List and NonNull
+	EnumVals []string // For Enum types
 }
 
 // IsScalar returns true if the type is a scalar.
@@ -181,12 +181,12 @@ type OperationDef struct {
 
 // SchemaDefinition holds the complete schema.
 type SchemaDefinition struct {
-	Types      map[string]*TypeDef
-	Query      *OperationDef
-	Mutation   *OperationDef
+	Types        map[string]*TypeDef
+	Query        *OperationDef
+	Mutation     *OperationDef
 	Subscription *OperationDef
-	Directives []*DirectiveDef
-	mu         sync.RWMutex
+	Directives   []*DirectiveDef
+	mu           sync.RWMutex
 }
 
 // DirectiveDef defines a directive.

@@ -11,49 +11,49 @@ const (
 	TokenIllegal
 
 	// Identifiers and literals
-	TokenName      // fieldName, Type, etc.
-	TokenInt       // 123
-	TokenFloat     // 3.14
-	TokenString    // "hello"
+	TokenName        // fieldName, Type, etc.
+	TokenInt         // 123
+	TokenFloat       // 3.14
+	TokenString      // "hello"
 	TokenBlockString // """multi-line"""
 
 	// Keywords
-	TokenQuery       // query
-	TokenMutation    // mutation
+	TokenQuery        // query
+	TokenMutation     // mutation
 	TokenSubscription // subscription
-	TokenFragment    // fragment
-	TokenOn          // on
-	TokenTrue        // true
-	TokenFalse       // false
-	TokenNull        // null
-	TokenSchema      // schema
-	TokenType        // type
-	TokenScalar      // scalar
-	TokenInterface   // interface
-	TokenUnion       // union
-	TokenEnum        // enum
-	TokenInput       // input
-	TokenDirective   // directive
-	TokenExtend      // extend
-	TokenImplements  // implements
-	TokenRepeatable  // repeatable
+	TokenFragment     // fragment
+	TokenOn           // on
+	TokenTrue         // true
+	TokenFalse        // false
+	TokenNull         // null
+	TokenSchema       // schema
+	TokenType         // type
+	TokenScalar       // scalar
+	TokenInterface    // interface
+	TokenUnion        // union
+	TokenEnum         // enum
+	TokenInput        // input
+	TokenDirective    // directive
+	TokenExtend       // extend
+	TokenImplements   // implements
+	TokenRepeatable   // repeatable
 
 	// Punctuation
-	TokenParenL      // (
-	TokenParenR      // )
-	TokenBraceL      // {
-	TokenBraceR      // }
-	TokenBracketL    // [
-	TokenBracketR    // ]
-	TokenColon       // :
-	TokenComma       // ,
-	TokenAt          // @
-	TokenDollar      // $
-	TokenEquals      // =
-	TokenBang        // !
-	TokenSpread      // ...
-	TokenPipe        // |
-	TokenAmpersand   // &
+	TokenParenL    // (
+	TokenParenR    // )
+	TokenBraceL    // {
+	TokenBraceR    // }
+	TokenBracketL  // [
+	TokenBracketR  // ]
+	TokenColon     // :
+	TokenComma     // ,
+	TokenAt        // @
+	TokenDollar    // $
+	TokenEquals    // =
+	TokenBang      // !
+	TokenSpread    // ...
+	TokenPipe      // |
+	TokenAmpersand // &
 )
 
 // Token represents a lexical token in GraphQL.

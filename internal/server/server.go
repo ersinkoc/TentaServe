@@ -44,13 +44,13 @@ func New(cfg *config.Config, handler http.Handler, logger *slog.Logger) *Server 
 	addr := net.JoinHostPort(serverCfg.Host, strconv.Itoa(serverCfg.Port))
 
 	httpServer := &http.Server{
-		Addr:              addr,
-		Handler:           handler,
-		ReadTimeout:       serverCfg.ReadTimeout,
-		WriteTimeout:      serverCfg.WriteTimeout,
-		IdleTimeout:       serverCfg.IdleTimeout,
-		MaxHeaderBytes:    serverCfg.MaxHeaderBytes,
-		TLSConfig:         tlsConfig,
+		Addr:           addr,
+		Handler:        handler,
+		ReadTimeout:    serverCfg.ReadTimeout,
+		WriteTimeout:   serverCfg.WriteTimeout,
+		IdleTimeout:    serverCfg.IdleTimeout,
+		MaxHeaderBytes: serverCfg.MaxHeaderBytes,
+		TLSConfig:      tlsConfig,
 	}
 
 	return &Server{

@@ -223,8 +223,8 @@ type nonFlusherWriter struct {
 }
 
 func (w *nonFlusherWriter) Header() http.Header         { return w.rec.Header() }
-func (w *nonFlusherWriter) Write(b []byte) (int, error)  { return w.rec.Write(b) }
-func (w *nonFlusherWriter) WriteHeader(code int)          { w.rec.WriteHeader(code) }
+func (w *nonFlusherWriter) Write(b []byte) (int, error) { return w.rec.Write(b) }
+func (w *nonFlusherWriter) WriteHeader(code int)        { w.rec.WriteHeader(code) }
 
 // TestSSETransportHandleMessage_InvalidSession tests POST with invalid session.
 func TestSSETransportHandleMessage_InvalidSession(t *testing.T) {

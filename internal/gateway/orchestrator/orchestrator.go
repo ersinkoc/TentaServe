@@ -18,16 +18,16 @@ import (
 
 // Upstream defines an upstream service.
 type Upstream struct {
-	Name          string            `json:"name"`
-	Target        string            `json:"target"`
-	PathPrefix    string            `json:"path_prefix"`
-	Headers       map[string]string `json:"headers,omitempty"`
-	AuthPlugin    string            `json:"auth_plugin,omitempty"`
-	AuthConfig    map[string]string `json:"auth_config,omitempty"`
-	RateLimit     *RateLimitConfig  `json:"rate_limit,omitempty"`
-	Cache         *CacheConfig      `json:"cache,omitempty"`
-	Breaker       *BreakerConfig    `json:"breaker,omitempty"`
-	HealthCheck   *HealthCheck      `json:"health_check,omitempty"`
+	Name        string            `json:"name"`
+	Target      string            `json:"target"`
+	PathPrefix  string            `json:"path_prefix"`
+	Headers     map[string]string `json:"headers,omitempty"`
+	AuthPlugin  string            `json:"auth_plugin,omitempty"`
+	AuthConfig  map[string]string `json:"auth_config,omitempty"`
+	RateLimit   *RateLimitConfig  `json:"rate_limit,omitempty"`
+	Cache       *CacheConfig      `json:"cache,omitempty"`
+	Breaker     *BreakerConfig    `json:"breaker,omitempty"`
+	HealthCheck *HealthCheck      `json:"health_check,omitempty"`
 }
 
 // RateLimitConfig defines rate limiting configuration.
@@ -50,7 +50,7 @@ type CacheConfig struct {
 
 // BreakerConfig defines circuit breaker configuration.
 type BreakerConfig struct {
-	Enabled          bool `json:"enabled"`
+	Enabled          bool   `json:"enabled"`
 	FailureThreshold uint32 `json:"failure_threshold"`
 	SuccessThreshold uint32 `json:"success_threshold"`
 	TimeoutSeconds   int    `json:"timeout_seconds"`
@@ -70,18 +70,18 @@ type Config struct {
 
 // Orchestrator manages the gateway.
 type Orchestrator struct {
-	mu         sync.RWMutex
-	config     *Config
-	logger     *slog.Logger
-	server     *http.Server
-	handlers   map[string]http.Handler
+	mu       sync.RWMutex
+	config   *Config
+	logger   *slog.Logger
+	server   *http.Server
+	handlers map[string]http.Handler
 
 	// Plugin registry
 	authPlugins map[string]auth.Plugin
 
 	// Middleware stores
-	breakers    map[string]*breaker.Store
-	caches      map[string]*cache.Cache
+	breakers map[string]*breaker.Store
+	caches   map[string]*cache.Cache
 
 	// Client for proxying
 	client     *http.Client

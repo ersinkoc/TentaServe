@@ -1,0 +1,25 @@
+# MCP-only mode - expose APIs to AI agents without GraphQL/REST translation
+server:
+  port: 8080
+
+upstreams:
+  - name: "backend"
+    type: "rest"
+    base_url: "https://api.example.com"
+    openapi:
+      source: "https://api.example.com/openapi.json"
+
+gateway:
+  mcp_path: "/mcp"
+
+mcp:
+  enabled: true
+  tools:
+    auto_discover: true
+    prefix: "backend"
+
+observability:
+  logging:
+    level: "info"
+  health:
+    enabled: true

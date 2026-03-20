@@ -250,15 +250,15 @@ func TestBuildBody(t *testing.T) {
 			wantNil: true,
 		},
 		{
-			name:   "POST with input",
-			method: "POST",
-			args:   map[string]interface{}{"input": map[string]interface{}{"name": "John"}},
+			name:     "POST with input",
+			method:   "POST",
+			args:     map[string]interface{}{"input": map[string]interface{}{"name": "John"}},
 			wantBody: `{"name":"John"}`,
 		},
 		{
-			name:   "POST with body args",
-			method: "POST",
-			args:   map[string]interface{}{"name": "John", "email": "john@example.com"},
+			name:     "POST with body args",
+			method:   "POST",
+			args:     map[string]interface{}{"name": "John", "email": "john@example.com"},
 			wantBody: `{"email":"john@example.com","name":"John"}`,
 		},
 		{
@@ -417,7 +417,7 @@ func TestResolver_BuildURL(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if url != "/" + "/" {
+		if url != "/"+"/" {
 			// baseURL="" -> "/" and path="" -> "/"
 			t.Logf("URL with empty base/path: %s", url)
 		}

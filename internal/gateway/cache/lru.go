@@ -213,8 +213,8 @@ func (s *shard) Clear() {
 
 // Cache is a sharded LRU cache with TTL support.
 type Cache struct {
-	config *Config
-	shards []*shard
+	config    *Config
+	shards    []*shard
 	numShards int
 }
 

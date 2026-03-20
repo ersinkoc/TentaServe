@@ -52,8 +52,8 @@ func TestHandler_ServeHTTP_SimpleQuery(t *testing.T) {
 	}
 
 	handler := NewHandler(HandlerOptions{
-		BasePath:     "/api",
-		Endpoints:    endpoints,
+		BasePath:      "/api",
+		Endpoints:     endpoints,
 		GraphQLClient: mockClient,
 	})
 
@@ -722,4 +722,3 @@ func TestNewHandler_WithGraphQLURL(t *testing.T) {
 		t.Error("Expected client to be created from GraphQLURL")
 	}
 }
-

@@ -98,9 +98,9 @@ func (e *Entry) Size() int {
 // ResponseWriter is a wrapper that captures the response for caching.
 type ResponseWriter struct {
 	http.ResponseWriter
-	statusCode int
-	body       *bytes.Buffer
-	headers    http.Header
+	statusCode  int
+	body        *bytes.Buffer
+	headers     http.Header
 	wroteHeader bool
 }
 

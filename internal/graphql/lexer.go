@@ -9,10 +9,10 @@ import (
 
 // Lexer tokenizes GraphQL query strings into a stream of tokens.
 type Lexer struct {
-	input string // input string being tokenized
-	pos   int    // current position in input (points to current char)
-	readPos int  // current reading position in input (after current char)
-	ch    rune   // current char under examination
+	input   string // input string being tokenized
+	pos     int    // current position in input (points to current char)
+	readPos int    // current reading position in input (after current char)
+	ch      rune   // current char under examination
 
 	line   int // current line number (1-indexed)
 	column int // current column number (1-indexed)
@@ -319,7 +319,7 @@ func (l *Lexer) readString() Token {
 	for l.ch != '"' && l.ch != 0 && l.ch != '\n' {
 		if l.ch == '\\' {
 			// Escape sequence
-			l.readChar() // move to escape character
+			l.readChar()                      // move to escape character
 			escaped := l.readEscapeSequence() // this will position after the escape
 			if escaped == utf8.RuneError {
 				// Invalid escape, write as-is

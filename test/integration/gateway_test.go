@@ -231,7 +231,11 @@ func TestGateway_CacheBypassOnAuthorization(t *testing.T) {
 	cm := cache.NewMiddleware(c, slog.Default())
 
 	handler := cm.Wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resp, _ := http.Get(backend.URL + r.URL.Path)
+		resp, err := http.Get(backend.URL + r.URL.Path)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
 		defer resp.Body.Close()
 		w.Header().Set("Content-Type", "application/json")
 		buf := make([]byte, 4096)

@@ -8,10 +8,10 @@ import (
 
 // Lexer tokenizes YAML input into a stream of tokens.
 type Lexer struct {
-	input   []rune
-	pos     int
-	line    int
-	column  int
+	input    []rune
+	pos      int
+	line     int
+	column   int
 	lastRune rune
 }
 

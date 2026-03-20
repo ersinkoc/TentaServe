@@ -408,9 +408,9 @@ func TestRequestNewErrorResponse(t *testing.T) {
 
 func TestRequestIDValue(t *testing.T) {
 	tests := []struct {
-		name     string
-		id       *RequestID
-		wantNil  bool
+		name    string
+		id      *RequestID
+		wantNil bool
 	}{
 		{"nil ID", nil, true},
 		{"string value", NewRequestID("test"), false},

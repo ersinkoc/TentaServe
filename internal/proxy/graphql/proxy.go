@@ -52,8 +52,8 @@ type QueryRequest struct {
 
 // QueryResponse represents a GraphQL query response.
 type QueryResponse struct {
-	Data   json.RawMessage        `json:"data,omitempty"`
-	Errors []GraphQLError         `json:"errors,omitempty"`
+	Data   json.RawMessage `json:"data,omitempty"`
+	Errors []GraphQLError  `json:"errors,omitempty"`
 }
 
 // GraphQLError represents a GraphQL error.
@@ -153,10 +153,10 @@ type IntrospectionData struct {
 
 // IntrospectionSchema represents the GraphQL schema from introspection.
 type IntrospectionSchema struct {
-	QueryType        *IntrospectionType      `json:"queryType,omitempty"`
-	MutationType     *IntrospectionType      `json:"mutationType,omitempty"`
-	SubscriptionType *IntrospectionType      `json:"subscriptionType,omitempty"`
-	Types            []*IntrospectionFullType `json:"types,omitempty"`
+	QueryType        *IntrospectionType        `json:"queryType,omitempty"`
+	MutationType     *IntrospectionType        `json:"mutationType,omitempty"`
+	SubscriptionType *IntrospectionType        `json:"subscriptionType,omitempty"`
+	Types            []*IntrospectionFullType  `json:"types,omitempty"`
 	Directives       []*IntrospectionDirective `json:"directives,omitempty"`
 }
 
@@ -213,9 +213,9 @@ type IntrospectionEnumValue struct {
 
 // IntrospectionDirective represents a directive.
 type IntrospectionDirective struct {
-	Name        string                  `json:"name"`
-	Description string                  `json:"description,omitempty"`
-	Locations   []string                `json:"locations"`
+	Name        string                     `json:"name"`
+	Description string                     `json:"description,omitempty"`
+	Locations   []string                   `json:"locations"`
 	Args        []*IntrospectionInputValue `json:"args,omitempty"`
 }
 

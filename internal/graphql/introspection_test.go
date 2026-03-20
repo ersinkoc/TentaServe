@@ -77,39 +77,39 @@ func TestIntrospect(t *testing.T) {
 								},
 							},
 						},
-							{
-								Kind: "OBJECT",
-								Name: "User",
-								Fields: []IntrospectionField{
-									{
-										Name: "id",
-										Type: TypeRef{
-											Kind: "NON_NULL",
-											OfType: &TypeRef{
-												Kind: "SCALAR",
-												Name: "ID",
-											},
-										},
-									},
-									{
-										Name: "name",
-										Type: TypeRef{
+						{
+							Kind: "OBJECT",
+							Name: "User",
+							Fields: []IntrospectionField{
+								{
+									Name: "id",
+									Type: TypeRef{
+										Kind: "NON_NULL",
+										OfType: &TypeRef{
 											Kind: "SCALAR",
-											Name: "String",
+											Name: "ID",
 										},
 									},
 								},
-							},
-							{
-								Kind: "SCALAR",
-								Name: "ID",
-							},
-							{
-								Kind: "SCALAR",
-								Name: "String",
+								{
+									Name: "name",
+									Type: TypeRef{
+										Kind: "SCALAR",
+										Name: "String",
+									},
+								},
 							},
 						},
+						{
+							Kind: "SCALAR",
+							Name: "ID",
+						},
+						{
+							Kind: "SCALAR",
+							Name: "String",
+						},
 					},
+				},
 			},
 		}
 

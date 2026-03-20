@@ -110,7 +110,7 @@ func TestDataLoader_Load_MultipleBatched(t *testing.T) {
 
 	// Check results
 	for i := 0; i < 3; i++ {
-		expectedVal := "value_key" + string(rune('0' + i))
+		expectedVal := "value_key" + string(rune('0'+i))
 		if results[i].err != nil {
 			t.Errorf("Load %d failed: %v", i, results[i].err)
 		}

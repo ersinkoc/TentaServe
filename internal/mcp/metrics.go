@@ -16,13 +16,13 @@ type Metrics struct {
 	SSEConnectionsTotal *metrics.CounterVec
 
 	// Gauges
-	ActiveConnections  *metrics.GaugeVec
-	RegisteredTools    *metrics.GaugeVec
+	ActiveConnections   *metrics.GaugeVec
+	RegisteredTools     *metrics.GaugeVec
 	RegisteredResources *metrics.GaugeVec
 
 	// Histograms
-	RequestDuration    *metrics.HistogramVec
-	ToolCallDuration   *metrics.HistogramVec
+	RequestDuration  *metrics.HistogramVec
+	ToolCallDuration *metrics.HistogramVec
 }
 
 // NewMetrics creates MCP metrics and registers them with the provided registry.

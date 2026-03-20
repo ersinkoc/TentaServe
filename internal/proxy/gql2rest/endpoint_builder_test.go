@@ -42,7 +42,7 @@ func TestEndpointBuilder_GenerateEndpoints(t *testing.T) {
 
 	// Create a mock schema
 	schema := &graphql.Schema{
-		QueryType: &graphql.TypeRef{Name: "Query"},
+		QueryType:    &graphql.TypeRef{Name: "Query"},
 		MutationType: &graphql.TypeRef{Name: "Mutation"},
 		Types: []graphql.IntrospectionType{
 			{

@@ -287,11 +287,11 @@ func TestGetNestedType(t *testing.T) {
 
 func TestCoerceValue(t *testing.T) {
 	tests := []struct {
-		name     string
-		value    string
-		oaType   string
-		format   string
-		wantErr  bool
+		name    string
+		value   string
+		oaType  string
+		format  string
+		wantErr bool
 	}{
 		{"string", "hello", "string", "", false},
 		{"integer valid", "42", "integer", "", false},

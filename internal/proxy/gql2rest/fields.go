@@ -24,9 +24,9 @@ import (
 
 // FieldParamParser handles parsing of the fields parameter.
 type FieldParamParser struct {
-	includeAll  bool
-	exclusions  map[string]bool
-	selectors   []FieldSelector
+	includeAll bool
+	exclusions map[string]bool
+	selectors  []FieldSelector
 }
 
 // NewFieldParamParser creates a new fields parameter parser.
@@ -115,10 +115,10 @@ func parseFieldList(fields string) []string {
 
 // SelectionSetBuilder builds a GraphQL selection set with filtering.
 type SelectionSetBuilder struct {
-	typeInfo   TypeInfo
-	maxDepth   int
-	exclude    map[string]bool
-	only       map[string]bool
+	typeInfo TypeInfo
+	maxDepth int
+	exclude  map[string]bool
+	only     map[string]bool
 }
 
 // TypeInfo provides information about a GraphQL type.
@@ -129,9 +129,9 @@ type TypeInfo struct {
 
 // FieldInfo provides information about a GraphQL field.
 type FieldInfo struct {
-	Name     string
-	Type     string
-	HasArgs  bool
+	Name      string
+	Type      string
+	HasArgs   bool
 	SubFields []FieldInfo
 }
 

@@ -11,14 +11,14 @@ import (
 // It implements the DataLoader pattern for efficient batching of N+1 queries.
 //
 // Usage:
-//   loader := NewDataLoader(batchFunc, 5*time.Millisecond, 100)
-//   val1, err1 := loader.Load(ctx, "key1")
-//   val2, err2 := loader.Load(ctx, "key2")
-//   // Both calls are batched and dispatched together
 //
+//	loader := NewDataLoader(batchFunc, 5*time.Millisecond, 100)
+//	val1, err1 := loader.Load(ctx, "key1")
+//	val2, err2 := loader.Load(ctx, "key2")
+//	// Both calls are batched and dispatched together
 type DataLoader struct {
-	batchFunc   BatchFunc
-	batchWindow time.Duration
+	batchFunc    BatchFunc
+	batchWindow  time.Duration
 	maxBatchSize int
 
 	// Pending loads waiting to be dispatched

@@ -223,11 +223,11 @@ func TestValidateUpstreamConfig(t *testing.T) {
 		{
 			name: "valid REST upstream",
 			cfg: UpstreamConfig{
-				Name:     "test-api",
-				Type:     "rest",
-				BaseURL:  "https://api.example.com",
-				Timeout:  30 * time.Second,
-				OpenAPI:  &OpenAPIConfig{Source: "https://api.example.com/openapi.json"},
+				Name:    "test-api",
+				Type:    "rest",
+				BaseURL: "https://api.example.com",
+				Timeout: 30 * time.Second,
+				OpenAPI: &OpenAPIConfig{Source: "https://api.example.com/openapi.json"},
 			},
 			wantErr: false,
 		},
@@ -244,41 +244,41 @@ func TestValidateUpstreamConfig(t *testing.T) {
 		{
 			name: "missing name",
 			cfg: UpstreamConfig{
-				Type:     "rest",
-				BaseURL:  "https://api.example.com",
-				Timeout:  30 * time.Second,
+				Type:    "rest",
+				BaseURL: "https://api.example.com",
+				Timeout: 30 * time.Second,
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid type",
 			cfg: UpstreamConfig{
-				Name:     "test",
-				Type:     "invalid",
-				BaseURL:  "https://api.example.com",
-				Timeout:  30 * time.Second,
+				Name:    "test",
+				Type:    "invalid",
+				BaseURL: "https://api.example.com",
+				Timeout: 30 * time.Second,
 			},
 			wantErr: true,
 		},
 		{
 			name: "REST missing openapi source",
 			cfg: UpstreamConfig{
-				Name:     "test",
-				Type:     "rest",
-				BaseURL:  "https://api.example.com",
-				Timeout:  30 * time.Second,
-				OpenAPI:  nil,
+				Name:    "test",
+				Type:    "rest",
+				BaseURL: "https://api.example.com",
+				Timeout: 30 * time.Second,
+				OpenAPI: nil,
 			},
 			wantErr: true,
 		},
 		{
 			name: "zero timeout",
 			cfg: UpstreamConfig{
-				Name:     "test",
-				Type:     "rest",
-				BaseURL:  "https://api.example.com",
-				Timeout:  0,
-				OpenAPI:  &OpenAPIConfig{Source: "https://api.example.com/openapi.json"},
+				Name:    "test",
+				Type:    "rest",
+				BaseURL: "https://api.example.com",
+				Timeout: 0,
+				OpenAPI: &OpenAPIConfig{Source: "https://api.example.com/openapi.json"},
 			},
 			wantErr: true,
 		},
@@ -574,12 +574,12 @@ func TestValidateGatewayConfig(t *testing.T) {
 		{
 			name: "valid gateway",
 			cfg: GatewayConfig{
-				RESTPrefix:  "/api",
-				GraphQLPath: "/graphql",
-				MCPPath:     "/mcp",
-				RateLimit:   RateLimitConfig{Enabled: false},
+				RESTPrefix:     "/api",
+				GraphQLPath:    "/graphql",
+				MCPPath:        "/mcp",
+				RateLimit:      RateLimitConfig{Enabled: false},
 				CircuitBreaker: CircuitBreakerConfig{Enabled: false},
-				Cache:       CacheConfig{Enabled: false},
+				Cache:          CacheConfig{Enabled: false},
 			},
 			wantErr: false,
 		},
@@ -613,24 +613,24 @@ func TestValidateGatewayConfig(t *testing.T) {
 		{
 			name: "conflicting rest_prefix and graphql_path",
 			cfg: GatewayConfig{
-				RESTPrefix:  "/api",
-				GraphQLPath: "/api",
-				MCPPath:     "/mcp",
-				RateLimit:   RateLimitConfig{Enabled: false},
+				RESTPrefix:     "/api",
+				GraphQLPath:    "/api",
+				MCPPath:        "/mcp",
+				RateLimit:      RateLimitConfig{Enabled: false},
 				CircuitBreaker: CircuitBreakerConfig{Enabled: false},
-				Cache:       CacheConfig{Enabled: false},
+				Cache:          CacheConfig{Enabled: false},
 			},
 			wantErr: true,
 		},
 		{
 			name: "conflicting rest_prefix and mcp_path",
 			cfg: GatewayConfig{
-				RESTPrefix:  "/mcp",
-				GraphQLPath: "/graphql",
-				MCPPath:     "/mcp",
-				RateLimit:   RateLimitConfig{Enabled: false},
+				RESTPrefix:     "/mcp",
+				GraphQLPath:    "/graphql",
+				MCPPath:        "/mcp",
+				RateLimit:      RateLimitConfig{Enabled: false},
 				CircuitBreaker: CircuitBreakerConfig{Enabled: false},
-				Cache:       CacheConfig{Enabled: false},
+				Cache:          CacheConfig{Enabled: false},
 			},
 			wantErr: true,
 		},
@@ -1218,9 +1218,9 @@ func TestMerge_ExtendedFields(t *testing.T) {
 
 func TestIsValidName(t *testing.T) {
 	tests := []struct {
-		name    string
-		input   string
-		wantOk  bool
+		name   string
+		input  string
+		wantOk bool
 	}{
 		{"valid lowercase", "myname", true},
 		{"valid uppercase", "MYNAME", true},

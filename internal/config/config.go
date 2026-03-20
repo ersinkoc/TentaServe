@@ -10,13 +10,13 @@ import (
 
 // Config is the top-level configuration structure.
 type Config struct {
-	Server         ServerConfig         `yaml:"server"`
-	Gateway        GatewayConfig        `yaml:"gateway"`
-	Upstreams      []UpstreamConfig     `yaml:"upstreams"`
-	Schema         SchemaConfig         `yaml:"schema"`
-	MCP            MCPConfig            `yaml:"mcp"`
-	Observability  ObservabilityConfig  `yaml:"observability"`
-	Admin          AdminConfig          `yaml:"admin"`
+	Server        ServerConfig        `yaml:"server"`
+	Gateway       GatewayConfig       `yaml:"gateway"`
+	Upstreams     []UpstreamConfig    `yaml:"upstreams"`
+	Schema        SchemaConfig        `yaml:"schema"`
+	MCP           MCPConfig           `yaml:"mcp"`
+	Observability ObservabilityConfig `yaml:"observability"`
+	Admin         AdminConfig         `yaml:"admin"`
 }
 
 // ServerConfig contains HTTP server settings.
@@ -38,20 +38,20 @@ type TLSConfig struct {
 
 // GatewayConfig contains API gateway settings.
 type GatewayConfig struct {
-	RESTPrefix      string                 `yaml:"rest_prefix"`
-	GraphQLPath     string                 `yaml:"graphql_path"`
-	MCPPath         string                 `yaml:"mcp_path"`
-	RateLimit       RateLimitConfig        `yaml:"rate_limit"`
-	CircuitBreaker  CircuitBreakerConfig   `yaml:"circuit_breaker"`
-	Cache           CacheConfig            `yaml:"cache"`
-	Auth            GatewayAuthConfig      `yaml:"auth"`
+	RESTPrefix     string               `yaml:"rest_prefix"`
+	GraphQLPath    string               `yaml:"graphql_path"`
+	MCPPath        string               `yaml:"mcp_path"`
+	RateLimit      RateLimitConfig      `yaml:"rate_limit"`
+	CircuitBreaker CircuitBreakerConfig `yaml:"circuit_breaker"`
+	Cache          CacheConfig          `yaml:"cache"`
+	Auth           GatewayAuthConfig    `yaml:"auth"`
 }
 
 // RateLimitConfig contains rate limiting settings.
 type RateLimitConfig struct {
-	Enabled           bool          `yaml:"enabled"`
-	RequestsPerSecond int           `yaml:"requests_per_second"`
-	BurstSize         int           `yaml:"burst_size"`
+	Enabled           bool `yaml:"enabled"`
+	RequestsPerSecond int  `yaml:"requests_per_second"`
+	BurstSize         int  `yaml:"burst_size"`
 }
 
 // CircuitBreakerConfig contains circuit breaker settings.
@@ -64,9 +64,9 @@ type CircuitBreakerConfig struct {
 
 // GatewayAuthConfig contains authentication settings for the gateway.
 type GatewayAuthConfig struct {
-	Strategy string         `yaml:"strategy"` // "passthrough", "jwt", "apikey"
-	JWT      JWTConfig      `yaml:"jwt"`
-	APIKey   APIKeyConfig   `yaml:"apikey"`
+	Strategy string       `yaml:"strategy"` // "passthrough", "jwt", "apikey"
+	JWT      JWTConfig    `yaml:"jwt"`
+	APIKey   APIKeyConfig `yaml:"apikey"`
 }
 
 // JWTConfig contains JWT authentication settings.
@@ -90,24 +90,24 @@ type APIKeyConfig struct {
 
 // CacheConfig contains caching settings.
 type CacheConfig struct {
-	Enabled       bool          `yaml:"enabled"`
-	MaxSize       int64         `yaml:"max_size"`
-	TTL           time.Duration `yaml:"ttl"`
-	MaxEntrySize  int64         `yaml:"max_entry_size"`
+	Enabled      bool          `yaml:"enabled"`
+	MaxSize      int64         `yaml:"max_size"`
+	TTL          time.Duration `yaml:"ttl"`
+	MaxEntrySize int64         `yaml:"max_entry_size"`
 }
 
 // UpstreamConfig defines a backend service.
 type UpstreamConfig struct {
-	Name       string            `yaml:"name"`
-	Type       string            `yaml:"type"` // "rest" or "graphql"
-	BaseURL    string            `yaml:"base_url"`
-	Endpoint   string            `yaml:"endpoint"`
-	OpenAPI    *OpenAPIConfig    `yaml:"openapi,omitempty"`
-	GraphQL    *GraphQLConfig    `yaml:"graphql,omitempty"`
-	Timeout    time.Duration     `yaml:"timeout"`
-	Retry      RetryConfig       `yaml:"retry"`
-	Auth       AuthConfig        `yaml:"auth"`
-	Headers    map[string]string `yaml:"headers"`
+	Name     string            `yaml:"name"`
+	Type     string            `yaml:"type"` // "rest" or "graphql"
+	BaseURL  string            `yaml:"base_url"`
+	Endpoint string            `yaml:"endpoint"`
+	OpenAPI  *OpenAPIConfig    `yaml:"openapi,omitempty"`
+	GraphQL  *GraphQLConfig    `yaml:"graphql,omitempty"`
+	Timeout  time.Duration     `yaml:"timeout"`
+	Retry    RetryConfig       `yaml:"retry"`
+	Auth     AuthConfig        `yaml:"auth"`
+	Headers  map[string]string `yaml:"headers"`
 }
 
 // OpenAPIConfig contains OpenAPI schema settings.
@@ -118,7 +118,7 @@ type OpenAPIConfig struct {
 
 // GraphQLConfig contains GraphQL introspection settings.
 type GraphQLConfig struct {
-	Introspection   IntrospectionConfig `yaml:"introspection"`
+	Introspection IntrospectionConfig `yaml:"introspection"`
 }
 
 // IntrospectionConfig contains GraphQL introspection settings.
@@ -178,10 +178,10 @@ type SchemaLimits struct {
 
 // MCPConfig contains MCP server settings.
 type MCPConfig struct {
-	Enabled   bool             `yaml:"enabled"`
-	Tools     MCPToolsConfig   `yaml:"tools"`
+	Enabled   bool              `yaml:"enabled"`
+	Tools     MCPToolsConfig    `yaml:"tools"`
 	Resources MCPResourceConfig `yaml:"resources"`
-	Prompts   MCPPromptConfig  `yaml:"prompts"`
+	Prompts   MCPPromptConfig   `yaml:"prompts"`
 	Sampling  MCPSamplingConfig `yaml:"sampling"`
 }
 

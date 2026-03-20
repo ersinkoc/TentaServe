@@ -22,11 +22,11 @@ type Endpoint struct {
 
 // Argument represents an endpoint argument.
 type Argument struct {
-	Name         string
-	Type         string
-	Required     bool
-	Location     string // "path", "query", or "body"
-	Description  string
+	Name        string
+	Type        string
+	Required    bool
+	Location    string // "path", "query", or "body"
+	Description string
 }
 
 // EndpointBuilder generates REST endpoints from GraphQL schemas.
@@ -287,9 +287,9 @@ func (b *EndpointBuilder) buildPathItem(ep Endpoint) map[string]interface{} {
 			})
 		} else if arg.Location == "query" {
 			param := map[string]interface{}{
-				"name":    arg.Name,
-				"in":      "query",
-				"schema":  map[string]interface{}{"type": arg.Type},
+				"name":   arg.Name,
+				"in":     "query",
+				"schema": map[string]interface{}{"type": arg.Type},
 			}
 			if arg.Description != "" {
 				param["description"] = arg.Description

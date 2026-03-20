@@ -90,8 +90,8 @@ type Logger interface {
 // the status code and response body for post-processing.
 type ResponseCapture struct {
 	http.ResponseWriter
-	StatusCode int
-	Body       *bytes.Buffer
+	StatusCode  int
+	Body        *bytes.Buffer
 	wroteHeader bool
 }
 

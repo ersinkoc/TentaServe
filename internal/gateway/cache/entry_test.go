@@ -27,8 +27,8 @@ func TestEntryIsExpired(t *testing.T) {
 // TestEntryIsStale tests stale checking.
 func TestEntryIsStale(t *testing.T) {
 	entry := &Entry{
-		CreatedAt:   time.Now().Add(-2 * time.Hour),
-		ExpiresAt:   time.Now().Add(-30 * time.Minute),
+		CreatedAt: time.Now().Add(-2 * time.Hour),
+		ExpiresAt: time.Now().Add(-30 * time.Minute),
 	}
 
 	// Within stale window (60s after expiry)
@@ -75,11 +75,11 @@ func TestEntryTTL(t *testing.T) {
 // TestEntryClone tests deep copying.
 func TestEntryClone(t *testing.T) {
 	original := &Entry{
-		StatusCode: 200,
-		Headers:    http.Header{"Content-Type": []string{"application/json"}},
-		Body:       []byte("test"),
-		CreatedAt:  time.Now(),
-		ExpiresAt:  time.Now().Add(time.Hour),
+		StatusCode:  200,
+		Headers:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:        []byte("test"),
+		CreatedAt:   time.Now(),
+		ExpiresAt:   time.Now().Add(time.Hour),
 		VaryHeaders: map[string]string{"Accept": "application/json"},
 	}
 

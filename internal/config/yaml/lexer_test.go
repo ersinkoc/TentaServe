@@ -145,10 +145,10 @@ func TestLexer_FoldedGreater(t *testing.T) {
 
 func TestLexer_QuotedValue(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		wantKey  string
-		wantVal  string
+		name    string
+		input   string
+		wantKey string
+		wantVal string
 	}{
 		{"double quoted", `key: "hello world"`, "key", "hello world"},
 		{"single quoted", `key: 'hello world'`, "key", "hello world"},

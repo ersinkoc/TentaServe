@@ -13,11 +13,11 @@ type QueryPlan struct {
 
 // PlanStep represents a single step in the query execution plan.
 type PlanStep struct {
-	ID           string
-	UpstreamName string
-	FieldPath    string
-	Dependencies []string // IDs of steps that must complete before this one
-	Parallel     bool     // Whether this step can run in parallel with others at same depth
+	ID             string
+	UpstreamName   string
+	FieldPath      string
+	Dependencies   []string          // IDs of steps that must complete before this one
+	Parallel       bool              // Whether this step can run in parallel with others at same depth
 	DataExtraction map[string]string // Maps result fields to variables for later steps
 
 	// Execution details
@@ -88,10 +88,10 @@ func (pb *PlanBuilder) BuildPlan(operationName string, fields []PlanField) (*Que
 			}
 
 			step := &PlanStep{
-				ID:           fmt.Sprintf("step-%d", stepID),
-				UpstreamName: upstreamName,
-				Parallel:     isParallel,
-				Dependencies: pb.getStepDependencies(plan.Steps, upstreamName, depGraph),
+				ID:             fmt.Sprintf("step-%d", stepID),
+				UpstreamName:   upstreamName,
+				Parallel:       isParallel,
+				Dependencies:   pb.getStepDependencies(plan.Steps, upstreamName, depGraph),
 				DataExtraction: make(map[string]string),
 				OperationType:  pb.inferOperationType(stepFields),
 				Arguments:      make(map[string]interface{}),
@@ -123,7 +123,7 @@ func (pb *PlanBuilder) BuildPlan(operationName string, fields []PlanField) (*Que
 type PlanField struct {
 	Path         string
 	UpstreamName string
-	Dependencies []string // Other field paths this field depends on
+	Dependencies []string          // Other field paths this field depends on
 	DataBindings map[string]string // Variable name -> result path binding
 	Arguments    map[string]interface{}
 }

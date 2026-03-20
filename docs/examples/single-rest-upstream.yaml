@@ -1,0 +1,14 @@
+# Single REST upstream - expose as GraphQL + MCP
+server:
+  port: 8080
+
+upstreams:
+  - name: "my-api"
+    type: "rest"
+    base_url: "https://api.example.com"
+    openapi:
+      source: "https://api.example.com/openapi.json"
+
+gateway:
+  graphql_path: "/graphql"
+  mcp_path: "/mcp"

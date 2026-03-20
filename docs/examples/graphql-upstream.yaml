@@ -1,0 +1,18 @@
+# GraphQL upstream - expose as REST + MCP
+server:
+  port: 8080
+
+upstreams:
+  - name: "products"
+    type: "graphql"
+    endpoint: "https://graphql.example.com/query"
+    introspection:
+      enabled: true
+
+gateway:
+  rest_prefix: "/api"
+  mcp_path: "/mcp"
+
+schema:
+  graphql2rest:
+    enabled: true

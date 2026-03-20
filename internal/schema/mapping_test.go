@@ -69,8 +69,8 @@ func TestFieldMapper_Map(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"usr_nm", "userName"},     // Explicit mapping
-		{"usr_id", "userId"},       // Explicit mapping
+		{"usr_nm", "userName"},      // Explicit mapping
+		{"usr_id", "userId"},        // Explicit mapping
 		{"first_name", "firstName"}, // Convention: snake -> camel
 		{"last_name", "lastName"},   // Convention: snake -> camel
 		{"email", "email"},          // Convention: already camel
@@ -98,8 +98,8 @@ func TestFieldMapper_MapReverse(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"userName", "usr_nm"},     // Explicit reverse mapping
-		{"userId", "usr_id"},       // Explicit reverse mapping
+		{"userName", "usr_nm"},      // Explicit reverse mapping
+		{"userId", "usr_id"},        // Explicit reverse mapping
 		{"firstName", "first_name"}, // Convention: camel -> snake
 		{"lastName", "last_name"},   // Convention: camel -> snake
 	}
@@ -122,10 +122,10 @@ func TestFieldMapper_Map_SnakeConvention(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"userName", "user_name"},    // camel -> snake
-		{"UserName", "user_name"},    // Pascal -> snake
-		{"user-name", "user_name"},   // kebab -> snake
-		{"user_name", "user_name"},   // already snake
+		{"userName", "user_name"},  // camel -> snake
+		{"UserName", "user_name"},  // Pascal -> snake
+		{"user-name", "user_name"}, // kebab -> snake
+		{"user_name", "user_name"}, // already snake
 	}
 
 	for _, tt := range tests {
@@ -146,9 +146,9 @@ func TestFieldMapper_Map_PascalConvention(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"user_name", "UserName"},    // snake -> Pascal
-		{"userName", "UserName"},     // camel -> Pascal
-		{"user-name", "UserName"},    // kebab -> Pascal
+		{"user_name", "UserName"}, // snake -> Pascal
+		{"userName", "UserName"},  // camel -> Pascal
+		{"user-name", "UserName"}, // kebab -> Pascal
 	}
 
 	for _, tt := range tests {
@@ -169,9 +169,9 @@ func TestFieldMapper_Map_KebabConvention(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"userName", "user-name"},    // camel -> kebab
-		{"user_name", "user-name"},   // snake -> kebab
-		{"UserName", "user-name"},    // Pascal -> kebab
+		{"userName", "user-name"},  // camel -> kebab
+		{"user_name", "user-name"}, // snake -> kebab
+		{"UserName", "user-name"},  // Pascal -> kebab
 	}
 
 	for _, tt := range tests {
@@ -302,8 +302,8 @@ func TestFieldMapper_MapFieldsReverse(t *testing.T) {
 	})
 
 	input := map[string]interface{}{
-		"userName": "John",     // Explicit reverse mapping -> usr_nm
-		"firstName": "Doe",    // Convention reverse -> first_name
+		"userName":  "John", // Explicit reverse mapping -> usr_nm
+		"firstName": "Doe",  // Convention reverse -> first_name
 	}
 
 	result := mapper.MapFieldsReverse(input)
@@ -398,10 +398,10 @@ func TestFieldMapper_AcronymHandling(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"getURL", "getURL"},           // Acronym preserved in camelCase
-		{"html_parser", "htmlParser"},  // Normal word conversion
-		{"parseHTML", "parseHTML"},     // Acronym at end preserved
-		{"userID", "userID"},           // ID acronym preserved
+		{"getURL", "getURL"},          // Acronym preserved in camelCase
+		{"html_parser", "htmlParser"}, // Normal word conversion
+		{"parseHTML", "parseHTML"},    // Acronym at end preserved
+		{"userID", "userID"},          // ID acronym preserved
 	}
 
 	for _, tt := range tests {

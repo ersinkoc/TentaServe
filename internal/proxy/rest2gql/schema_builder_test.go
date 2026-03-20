@@ -113,7 +113,7 @@ func TestSchemaBuilder_Build_MutationFields(t *testing.T) {
 		Paths: map[string]*openapi.PathItem{
 			"/users": {
 				Post: &openapi.Operation{
-					Summary:     "Create user",
+					Summary: "Create user",
 					RequestBody: &openapi.RequestBody{
 						Required: true,
 						Content: map[string]*openapi.MediaType{

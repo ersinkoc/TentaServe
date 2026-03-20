@@ -369,7 +369,7 @@ func TestLexerBlockStrings(t *testing.T) {
 			expected: "hello",
 		},
 		{
-			name: "multi-line block string",
+			name:  "multi-line block string",
 			input: `"""` + "\n  hello\n  world\n" + `"""`,
 			// GraphQL block strings strip common leading whitespace
 			expected: "hello\nworld",
@@ -407,7 +407,7 @@ func TestLexerComments(t *testing.T) {
 	tokens := []TokenKind{
 		TokenQuery,
 		TokenBraceL,
-		TokenName,   // hello
+		TokenName, // hello
 		TokenBraceR,
 		TokenEOF,
 	}
@@ -487,11 +487,11 @@ func TestLexerPosition(t *testing.T) {
 		expectedLine   int
 		expectedColumn int
 	}{
-		{1, 1},  // query
-		{1, 7},  // {
-		{2, 3},  // hello
-		{3, 2},  // }
-		{3, 3},  // EOF
+		{1, 1}, // query
+		{1, 7}, // {
+		{2, 3}, // hello
+		{3, 2}, // }
+		{3, 3}, // EOF
 	}
 
 	for i, tt := range tests {

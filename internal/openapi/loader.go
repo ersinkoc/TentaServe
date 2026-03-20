@@ -34,10 +34,10 @@ func DefaultLoadOptions() *LoadOptions {
 
 // LoadResult contains the result of loading an OpenAPI spec.
 type LoadResult struct {
-	Spec       *OpenAPISpec
-	Source     string
-	Format     string // "json" or "yaml"
-	Resolved   bool   // whether refs were resolved
+	Spec     *OpenAPISpec
+	Source   string
+	Format   string // "json" or "yaml"
+	Resolved bool   // whether refs were resolved
 }
 
 // LoadOpenAPISpec loads an OpenAPI spec from a file path, URL, or inline JSON/YAML.

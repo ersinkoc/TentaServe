@@ -112,8 +112,8 @@ func TestSanitizeName(t *testing.T) {
 // TestTruncateName tests name truncation.
 func TestTruncateName(t *testing.T) {
 	tests := []struct {
-		name   string
-		maxLen int
+		name        string
+		maxLen      int
 		expectedLen int
 	}{
 		{"short", 100, 5},

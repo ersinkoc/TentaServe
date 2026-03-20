@@ -89,11 +89,11 @@ func (r *DataLoaderResolver) BatchResolve(ctx context.Context, keys []string) ([
 // BatchResolver wraps multiple resolvers for efficient batching.
 // It makes a single batched REST API call for multiple items.
 type BatchResolver struct {
-	client       *upstream.Client
-	baseURL      string
-	batchPath    string  // e.g., "/api/items"
-	idParamName  string  // e.g., "ids"
-	resultKey    string  // JSON key containing results array
+	client      *upstream.Client
+	baseURL     string
+	batchPath   string // e.g., "/api/items"
+	idParamName string // e.g., "ids"
+	resultKey   string // JSON key containing results array
 }
 
 // BatchResolverOptions configures the BatchResolver.

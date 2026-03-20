@@ -12,7 +12,7 @@ import (
 
 // FieldSelector represents a field selection with optional sub-selections.
 type FieldSelector struct {
-	Name     string
+	Name      string
 	SubFields []FieldSelector
 }
 

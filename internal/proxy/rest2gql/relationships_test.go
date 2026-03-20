@@ -108,7 +108,7 @@ func TestExtractResourceName(t *testing.T) {
 		{"/users", "User"},
 		{"/users/{id}", "User"},
 		{"/users/{id}/posts", "Post"},
-		{"/user-profiles", "UserProfil"},  // Simple singularize behavior
+		{"/user-profiles", "UserProfil"}, // Simple singularize behavior
 		{"/", ""},
 	}
 
@@ -179,7 +179,7 @@ func TestSimplePluralize(t *testing.T) {
 		{"post", "posts"},
 		{"category", "categories"},
 		{"box", "boxes"},
-		{"users", "users"},  // Already plural - should stay
+		{"users", "users"}, // Already plural - should stay
 	}
 
 	for _, tt := range tests {

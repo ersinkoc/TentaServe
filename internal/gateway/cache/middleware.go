@@ -221,9 +221,9 @@ func DefaultMiddleware(logger *slog.Logger) *Middleware {
 
 // captureResponse is a simple response writer for background revalidation.
 type captureResponse struct {
-	statusCode int
-	headers    http.Header
-	body       *bytes.Buffer
+	statusCode  int
+	headers     http.Header
+	body        *bytes.Buffer
 	wroteHeader bool
 }
 

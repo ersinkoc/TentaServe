@@ -212,9 +212,9 @@ func TestClassifyRequest_UpstreamRouting(t *testing.T) {
 
 func TestClassify(t *testing.T) {
 	tests := []struct {
-		method      string
-		path        string
-		expected    RequestType
+		method   string
+		path     string
+		expected RequestType
 	}{
 		{"POST", "/graphql", TypeGraphQL},
 		{"POST", "/mcp", TypeMCP},

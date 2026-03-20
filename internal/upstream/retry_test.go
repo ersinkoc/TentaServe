@@ -86,9 +86,9 @@ func TestBodyReader_Seek(t *testing.T) {
 	}{
 		{0, io.SeekStart, 0},
 		{5, io.SeekStart, 5},
-		{3, io.SeekCurrent, 8},    // 5 + 3 = 8 (after reading 5 bytes)
-		{-2, io.SeekEnd, 8},       // 10 - 2 = 8
-		{-1, io.SeekStart, 0},     // clamp to 0
+		{3, io.SeekCurrent, 8}, // 5 + 3 = 8 (after reading 5 bytes)
+		{-2, io.SeekEnd, 8},    // 10 - 2 = 8
+		{-1, io.SeekStart, 0},  // clamp to 0
 	}
 
 	for _, tt := range tests {

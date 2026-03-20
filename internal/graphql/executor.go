@@ -22,11 +22,11 @@ type ResolverFunc func(ctx context.Context, parent interface{}, args map[string]
 
 // ExecutionContext holds the context for query execution.
 type ExecutionContext struct {
-	Context    context.Context
-	Variables  map[string]interface{}
-	Errors     []ExecutionError
-	Document   *Document // Reference to the parsed document for fragment resolution
-	mu         sync.Mutex
+	Context   context.Context
+	Variables map[string]interface{}
+	Errors    []ExecutionError
+	Document  *Document // Reference to the parsed document for fragment resolution
+	mu        sync.Mutex
 }
 
 // ExecutionError represents an error during execution.

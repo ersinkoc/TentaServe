@@ -12,11 +12,11 @@ import (
 
 // Handler handles REST requests and translates them to GraphQL.
 type Handler struct {
-	endpoints    []Endpoint
-	schema       *Schema
-	translator   *Translator
-	client       GraphQLClient
-	basePath     string
+	endpoints  []Endpoint
+	schema     *Schema
+	translator *Translator
+	client     GraphQLClient
+	basePath   string
 }
 
 // Schema represents a GraphQL schema for the handler.
@@ -109,9 +109,9 @@ func (c *HTTPGraphQLClient) Execute(ctx context.Context, query string, variables
 
 // HandlerOptions configures the handler.
 type HandlerOptions struct {
-	BasePath     string
-	Endpoints    []Endpoint
-	GraphQLURL   string
+	BasePath      string
+	Endpoints     []Endpoint
+	GraphQLURL    string
 	GraphQLClient GraphQLClient
 }
 
@@ -123,9 +123,9 @@ func NewHandler(opts HandlerOptions) *Handler {
 	}
 
 	return &Handler{
-		endpoints: opts.Endpoints,
-		basePath:  opts.BasePath,
-		client:    client,
+		endpoints:  opts.Endpoints,
+		basePath:   opts.BasePath,
+		client:     client,
 		translator: nil, // Will be initialized on first use
 	}
 }
@@ -372,4 +372,3 @@ func (h *Handler) writeError(w http.ResponseWriter, status int, code, message st
 		Message: message,
 	})
 }
-

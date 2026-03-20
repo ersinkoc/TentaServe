@@ -15,10 +15,10 @@ import (
 
 // mockSubscriptionClient implements SubscriptionClient for testing.
 type mockSubscriptionClient struct {
-	events   []*SubscriptionEvent
-	err      error
-	query    string
-	vars     map[string]interface{}
+	events []*SubscriptionEvent
+	err    error
+	query  string
+	vars   map[string]interface{}
 }
 
 func (m *mockSubscriptionClient) Subscribe(ctx context.Context, query string, variables map[string]interface{}) (<-chan *SubscriptionEvent, error) {

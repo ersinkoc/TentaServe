@@ -23,11 +23,11 @@ type Client struct {
 
 // RetryConfig configures retry behavior.
 type RetryConfig struct {
-	MaxRetries  int
-	BaseDelay   time.Duration
-	MaxDelay    time.Duration
-	Multiplier  float64
-	Retryable   func(resp *http.Response, err error) bool
+	MaxRetries int
+	BaseDelay  time.Duration
+	MaxDelay   time.Duration
+	Multiplier float64
+	Retryable  func(resp *http.Response, err error) bool
 }
 
 // DefaultRetryConfig returns sensible retry defaults.
@@ -58,10 +58,10 @@ func DefaultRetryable(resp *http.Response, err error) bool {
 
 // ClientOptions configures the client.
 type ClientOptions struct {
-	BaseURL     string
-	Timeout     time.Duration
-	Retry       RetryConfig
-	Headers     map[string]string
+	BaseURL      string
+	Timeout      time.Duration
+	Retry        RetryConfig
+	Headers      map[string]string
 	MaxIdleConns int
 }
 

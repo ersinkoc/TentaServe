@@ -403,10 +403,10 @@ func TestParseVariableAsValue(t *testing.T) {
 
 func TestParseType(t *testing.T) {
 	tests := []struct {
-		input    string
-		expected string
+		input     string
+		expected  string
 		isNonNull bool
-		isList   bool
+		isList    bool
 	}{
 		{"String", "String", false, false},
 		{"String!", "String", true, false},

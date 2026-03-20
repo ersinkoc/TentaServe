@@ -1,0 +1,59 @@
+# Multiple upstreams with full gateway features
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+upstreams:
+  - name: "users-api"
+    type: "rest"
+    base_url: "https://users.internal:3000"
+    openapi:
+      source: "https://users.internal:3000/openapi.json"
+    auth:
+      strategy: "forward"
+    timeout: 10s
+
+  - name: "products-api"
+    type: "graphql"
+    endpoint: "https://products.internal:4000/graphql"
+    introspection:
+      enabled: true
+    timeout: 15s
+
+gateway:
+  rest_prefix: "/api"
+  graphql_path: "/graphql"
+  mcp_path: "/mcp"
+
+  rate_limit:
+    enabled: true
+    requests_per_second: 100
+    burst_size: 150
+
+  cache:
+    enabled: true
+    ttl: 5m
+    max_size: 256MB
+
+  circuit_breaker:
+    enabled: true
+    failure_threshold: 5
+    reset_timeout: 30s
+
+mcp:
+  enabled: true
+  tools:
+    auto_discover: true
+
+observability:
+  logging:
+    level: "info"
+    format: "json"
+  metrics:
+    enabled: true
+  health:
+    enabled: true
+
+admin:
+  enabled: true
+  path: "/-/admin"

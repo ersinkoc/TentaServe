@@ -64,12 +64,12 @@ func NewWatcher(cfg *Config) *Watcher {
 	}
 
 	return &Watcher{
-		loader:   cfg.Loader,
+		loader:    cfg.Loader,
 		validator: cfg.Validator,
-		applier:  cfg.Applier,
-		interval: cfg.Interval,
-		logger:   cfg.Logger,
-		stop:     make(chan struct{}),
+		applier:   cfg.Applier,
+		interval:  cfg.Interval,
+		logger:    cfg.Logger,
+		stop:      make(chan struct{}),
 	}
 }
 

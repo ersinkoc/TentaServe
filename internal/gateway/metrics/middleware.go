@@ -8,11 +8,11 @@ import (
 
 // Middleware collects HTTP metrics.
 type Middleware struct {
-	registry     *Registry
-	requestTotal *CounterVec
+	registry        *Registry
+	requestTotal    *CounterVec
 	requestDuration *HistogramVec
-	responseSize *HistogramVec
-	activeRequests *GaugeVec
+	responseSize    *HistogramVec
+	activeRequests  *GaugeVec
 }
 
 // NewMiddleware creates a new metrics middleware.

@@ -471,9 +471,9 @@ func (m *mockLogger) Error(ctx interface{}, msg string, keysAndValues ...interfa
 	m.errorCalled = true
 }
 
-func (m *mockLogger) Info(ctx interface{}, msg string, keysAndValues ...interface{}) {}
+func (m *mockLogger) Info(ctx interface{}, msg string, keysAndValues ...interface{})  {}
 func (m *mockLogger) Debug(ctx interface{}, msg string, keysAndValues ...interface{}) {}
-func (m *mockLogger) Warn(ctx interface{}, msg string, keysAndValues ...interface{}) {}
+func (m *mockLogger) Warn(ctx interface{}, msg string, keysAndValues ...interface{})  {}
 
 // errorString returns an error with the given message.
 func errorString(s string) error {

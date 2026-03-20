@@ -163,15 +163,15 @@ func TestMapErrorCodeToStatus(t *testing.T) {
 		{"INTERNAL_ERROR", "Server error", http.StatusInternalServerError},
 		{"TIMEOUT", "Request timed out", http.StatusGatewayTimeout},
 		{"RATE_LIMITED", "Too many requests", http.StatusTooManyRequests},
-		{"", "Not found", http.StatusNotFound},               // message pattern matching
-		{"", "Unauthorized access", http.StatusUnauthorized}, // message pattern matching
+		{"", "Not found", http.StatusNotFound},                   // message pattern matching
+		{"", "Unauthorized access", http.StatusUnauthorized},     // message pattern matching
 		{"", "Some other error", http.StatusInternalServerError}, // default
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.code, func(t *testing.T) {
 			err := GraphQLError{
-				Message:   tt.message,
+				Message:    tt.message,
 				Extensions: map[string]interface{}{},
 			}
 			if tt.code != "" {
